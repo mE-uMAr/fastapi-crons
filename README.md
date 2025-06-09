@@ -1,4 +1,28 @@
-# FastAPI Crons – Developer Guide
+<h1 align="center"><strong>FASTAPI-CRONS</strong></h1>
+
+<p align="center"><em>Effortlessly schedule and manage your background tasks.</em></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/last%20commit-may-informational?style=flat-square" />
+  <img src="https://img.shields.io/badge/python-100%25-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/languages-1-blue?style=flat-square" />
+</p>
+
+<br/>
+
+<p align="center"><em>Built with the tools and technologies:</em></p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/-Markdown-000000?style=flat-square&logo=markdown" />
+  <img src="https://img.shields.io/badge/-Typer-000000?style=flat-square&logo=python" />
+  <img src="https://img.shields.io/badge/-TOML-bc4c3f?style=flat-square" />
+  <img src="https://img.shields.io/badge/-FastAPI-009688?style=flat-square&logo=fastapi" />
+  <img src="https://img.shields.io/badge/-Python-306998?style=flat-square&logo=python" />
+  <img src="https://img.shields.io/badge/-AIOHTTP-2c5282?style=flat-square" />
+  <img src="https://img.shields.io/badge/-Pydantic-d6336c?style=flat-square" />
+</p>
+
+<h1 align="center">FastAPI Crons – Developer Guide</h1>
 
 Welcome to the official guide for using `fastapi_crons`, a high-performance, developer-friendly cron scheduling extension for FastAPI. This library enables you to define, monitor, and control scheduled background jobs using simple decorators and provides CLI tools, web-based monitoring, and SQLite-based job tracking.
 
@@ -82,7 +106,7 @@ Once included, visit:
 GET /crons
 ```
 
-You’ll get a full list of jobs with:
+You'll get a full list of jobs with:
 
 * `name`
 * `expr` (cron expression)
@@ -136,7 +160,7 @@ fastapi_cron list
 fastapi_cron run_job < job_name >
 ```
 
-> **Note**: CLI registry info will be expanded in later versions.
+>
 
 ---
 ## 🧩 Advanced Features
@@ -181,7 +205,7 @@ FastAPI App
 
 ## 🧠 Contributing
 
-We welcome PRs and suggestions! If you’d like this added to FastAPI officially, fork the repo, polish it, and submit to FastAPI with a clear integration proposal.
+We welcome PRs and suggestions! If you'd like this added to FastAPI officially, fork the repo, polish it, and submit to FastAPI with a clear integration proposal.
 
 ---
 
@@ -199,17 +223,17 @@ We welcome PRs and suggestions! If you’d like this added to FastAPI officially
 
 ---
 
-## 💬 Credits
-
-Made with ❤️ by Mehar Umar.  
-Designed to give developers freedom, flexibility, and control when building production-grade FastAPI apps.
-
----
-
 #### Need help? Reach out:
 [Email me](mailto:contact@meharumar.codes)
 
 [github](https://github.com/me-umar)
 
 ## Read Documentation at:
-[Documentation](https://crons.meharumar.docs)
+[Documentation](https://crons.meharumar.codes)
+---
+## 💬 Credits
+
+Made with ❤️ by Mehar Umar.  
+Designed to give developers freedom, flexibility, and control when building production-grade FastAPI apps.
+
+---

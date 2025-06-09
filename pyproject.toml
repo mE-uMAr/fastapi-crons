@@ -4,18 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi-crons"
-version = "0.1.2"
+version = "2.0.1"
 description = "Cron scheduling extension for FastAPI with decorators, async support, Hooks, CLI, and SQLite job tracking."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
   { name="Mehar Umar", email="contact@meharumar.codes" }
 ]
+keywords = ["fastapi", "cron", "scheduler", "background jobs", "tasks", "async crons", "fastapi crons", "crons"]
 dependencies = [
   "fastapi>=0.100",
   "croniter>=1.3.0",
   "aiosqlite>=0.18.0",
   "typer[all]>=0.9.0",
+  "rich",
+  "redis",
   "pydantic>=2.0.0",
   "aiohttp"
 ]
