@@ -19,12 +19,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Global instance to share jobs across decorators and scheduler
-_global_crons = None
+_global_crons: Optional["Crons"] = None
 
 class Crons:
-    def __init__(self, app=None, state_backend: Optional[StateBackend] = None, 
+    def __init__(self, app: Optional[Any] = None, state_backend: Optional[StateBackend] = None, 
                  lock_manager: Optional[DistributedLockManager] = None,
-                 config: Optional[CronConfig] = None):
+                 config: Optional[CronConfig] = None) -> None:
         global _global_crons
         
         self.jobs: List[CronJob] = []
@@ -66,14 +66,14 @@ class Crons:
         if app:
             self.init_app(app)
 
-    def init_app(self, app):
+    def init_app(self, app: Any) -> None:
         """Initialize with FastAPI app - automatically start/stop with app lifecycle."""
         
         # Check if app already has a lifespan
         existing_lifespan = getattr(app.router, 'lifespan_context', None)
         
         @asynccontextmanager
-        async def lifespan_with_crons(app):
+        async def lifespan_with_crons(app: Any):  # type: ignore
             # Startup - delay to allow job registration
             await asyncio.sleep(self._startup_delay)
             await self.start()
@@ -91,7 +91,7 @@ class Crons:
         # Set the new lifespan
         app.router.lifespan_context = lifespan_with_crons
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the cron scheduler."""
         if self._running:
             return
@@ -123,7 +123,7 @@ class Crons:
             )
             self._tasks.append(task)
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the cron scheduler."""
         if not self._running:
             return
@@ -145,9 +145,9 @@ class Crons:
         # Stop lock manager
         await self.lock_manager.cleanup()
 
-    def cron(self, expr: str, *, name=None, tags=None):
+    def cron(self, expr: str, *, name: Optional[str] = None, tags: Optional[List[str]] = None) -> Callable:
         """Decorator for creating cron jobs."""
-        def wrapper(func: Callable):
+        def wrapper(func: Callable) -> Callable:
             job = CronJob(func, expr, name=name, tags=tags)
             self.jobs.append(job)
             logger.info(f"Registered cron job '{job.name}' with expression '{expr}'")
@@ -163,7 +163,7 @@ class Crons:
             return func
         return wrapper
 
-    def get_jobs(self):
+    def get_jobs(self) -> List[CronJob]:
         return self.jobs
         
     def get_job(self, name: str) -> Optional[CronJob]:
@@ -173,7 +173,7 @@ class Crons:
                 return job
         return None
         
-    def add_before_run_hook(self, hook: HookFunc, job_name: Optional[str] = None):
+    def add_before_run_hook(self, hook: HookFunc, job_name: Optional[str] = None) -> "Crons":
         """Add a hook to be executed before job runs."""
         if job_name:
             job = self.get_job(job_name)
@@ -184,7 +184,7 @@ class Crons:
                 job.add_before_run_hook(hook)
         return self
         
-    def add_after_run_hook(self, hook: HookFunc, job_name: Optional[str] = None):
+    def add_after_run_hook(self, hook: HookFunc, job_name: Optional[str] = None) -> "Crons":
         """Add a hook to be executed after job runs successfully."""
         if job_name:
             job = self.get_job(job_name)
@@ -195,7 +195,7 @@ class Crons:
                 job.add_after_run_hook(hook)
         return self
         
-    def add_on_error_hook(self, hook: HookFunc, job_name: Optional[str] = None):
+    def add_on_error_hook(self, hook: HookFunc, job_name: Optional[str] = None) -> "Crons":
         """Add a hook to be executed when job fails."""
         if job_name:
             job = self.get_job(job_name)

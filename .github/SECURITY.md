@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in FastAPI Crons, please email security@meharumar.codes instead of using the issue tracker.
+If you discover a security vulnerability in FastAPI Crons, please email contact@meharumar.codes instead of using the issue tracker.
 
 Please include:
 - Description of the vulnerability

@@ -34,7 +34,7 @@ class LockBackend(ABC):
 class LocalLockBackend(LockBackend):
     """Local in-memory lock backend for single-instance deployments."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.locks: Dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
     
@@ -94,7 +94,7 @@ class LocalLockBackend(LockBackend):
 class RedisLockBackend(LockBackend):
     """Redis-based lock backend for distributed deployments."""
     
-    def __init__(self, redis_client):
+    def __init__(self, redis_client: Any) -> None:
         self.redis = redis_client
     
     async def acquire_lock(self, key: str, ttl: int) -> Optional[str]:
@@ -158,7 +158,7 @@ class RedisLockBackend(LockBackend):
 class DistributedLockManager:
     """Manager for distributed locking with automatic renewal."""
     
-    def __init__(self, backend: LockBackend, config: CronConfig):
+    def __init__(self, backend: LockBackend, config: CronConfig) -> None:
         self.backend = backend
         self.config = config
         self.active_locks: Dict[str, str] = {}  # key -> lock_id
@@ -193,7 +193,7 @@ class DistributedLockManager:
         """Check if a key is locked."""
         return await self.backend.is_locked(key)
     
-    async def start_renewal_task(self):
+    async def start_renewal_task(self) -> None:
         """Start the automatic lock renewal task."""
         if self._running:
             return
@@ -201,7 +201,7 @@ class DistributedLockManager:
         self._running = True
         self.renewal_task = asyncio.create_task(self._renewal_loop())
     
-    async def _renewal_loop(self):
+    async def _renewal_loop(self) -> None:
         """Background task to renew active locks."""
         while self._running:
             try:
@@ -231,7 +231,7 @@ class DistributedLockManager:
                 logger.error(f"Error in lock renewal loop: {e}")
                 await asyncio.sleep(5)  # Wait before retrying
     
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Clean up the lock manager."""
         self._running = False
         

@@ -1,7 +1,7 @@
 import aiosqlite
 import asyncio
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any, Dict
 from abc import ABC, abstractmethod
 import logging
 
@@ -18,7 +18,7 @@ class StateBackend(ABC):
     """Abstract base class for state backends."""
     
     @abstractmethod
-    async def set_last_run(self, job_name: str, timestamp: datetime):
+    async def set_last_run(self, job_name: str, timestamp: datetime) -> None:
         """Set the last run timestamp for a job."""
         pass
     
@@ -33,23 +33,23 @@ class StateBackend(ABC):
         pass
     
     @abstractmethod
-    async def set_job_status(self, job_name: str, status: str, instance_id: str):
+    async def set_job_status(self, job_name: str, status: str, instance_id: str) -> None:
         """Set the status of a job (running, completed, failed)."""
         pass
     
     @abstractmethod
-    async def get_job_status(self, job_name: str) -> Optional[dict]:
+    async def get_job_status(self, job_name: str) -> Optional[Dict[str, Any]]:
         """Get the status of a job."""
         pass
 
 class SQLiteStateBackend(StateBackend):
     """SQLite-based state backend with thread safety."""
     
-    def __init__(self, db_path: str = "cron_state.db"):
+    def __init__(self, db_path: str = "cron_state.db") -> None:
         self.db_path = db_path
         self._lock = asyncio.Lock()
 
-    async def _ensure_tables(self, db):
+    async def _ensure_tables(self, db: aiosqlite.Connection) -> None:
         """Ensure required tables exist."""
         await db.execute("""
             CREATE TABLE IF NOT EXISTS job_state (
@@ -84,7 +84,7 @@ class SQLiteStateBackend(StateBackend):
             )
         """)
 
-    async def set_last_run(self, job_name: str, timestamp: datetime):
+    async def set_last_run(self, job_name: str, timestamp: datetime) -> None:
         """Set the last run timestamp for a job with thread safety."""
         async with self._lock:
             async with aiosqlite.connect(self.db_path) as db:
@@ -111,7 +111,7 @@ class SQLiteStateBackend(StateBackend):
             async with db.execute("SELECT name, last_run FROM job_state ORDER BY name") as cursor:
                 return await cursor.fetchall()
     
-    async def set_job_status(self, job_name: str, status: str, instance_id: str):
+    async def set_job_status(self, job_name: str, status: str, instance_id: str) -> None:
         """Set the status of a job."""
         async with self._lock:
             async with aiosqlite.connect(self.db_path) as db:
@@ -135,7 +135,7 @@ class SQLiteStateBackend(StateBackend):
                 
                 await db.commit()
     
-    async def get_job_status(self, job_name: str) -> Optional[dict]:
+    async def get_job_status(self, job_name: str) -> Optional[Dict[str, Any]]:
         """Get the status of a job."""
         async with aiosqlite.connect(self.db_path) as db:
             await self._ensure_tables(db)
@@ -155,7 +155,7 @@ class SQLiteStateBackend(StateBackend):
     
     async def log_job_execution(self, job_name: str, instance_id: str, status: str, 
                                started_at: datetime, completed_at: Optional[datetime] = None,
-                               duration: Optional[float] = None, error_message: Optional[str] = None):
+                               duration: Optional[float] = None, error_message: Optional[str] = None) -> None:
         """Log job execution details."""
         async with self._lock:
             async with aiosqlite.connect(self.db_path) as db:
@@ -173,10 +173,10 @@ class SQLiteStateBackend(StateBackend):
 class RedisStateBackend(StateBackend):
     """Redis-based state backend for distributed deployments."""
     
-    def __init__(self, redis_client):
+    def __init__(self, redis_client: Any) -> None:
         self.redis = redis_client
     
-    async def set_last_run(self, job_name: str, timestamp: datetime):
+    async def set_last_run(self, job_name: str, timestamp: datetime) -> None:
         """Set the last run timestamp for a job."""
         key = f"cron:job:{job_name}:last_run"
         await self.redis.set(key, timestamp.isoformat())
@@ -202,10 +202,10 @@ class RedisStateBackend(StateBackend):
         
         return sorted(jobs)
     
-    async def set_job_status(self, job_name: str, status: str, instance_id: str):
+    async def set_job_status(self, job_name: str, status: str, instance_id: str) -> None:
         """Set the status of a job."""
         key = f"cron:job:{job_name}:status"
-        status_data = {
+        status_data: Dict[str, str] = {
             "status": status,
             "instance_id": instance_id,
             "updated_at": datetime.now().isoformat()
@@ -219,7 +219,7 @@ class RedisStateBackend(StateBackend):
         # Set expiration for status (cleanup old statuses)
         await self.redis.expire(key, 3600)  # 1 hour
     
-    async def get_job_status(self, job_name: str) -> Optional[dict]:
+    async def get_job_status(self, job_name: str) -> Optional[Dict[str, Any]]:
         """Get the status of a job."""
         key = f"cron:job:{job_name}:status"
         result = await self.redis.hgetall(key)

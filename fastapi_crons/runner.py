@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import logging
 from datetime import datetime
+from typing import Any
 from .state import StateBackend
 from .job import CronJob, HookFunc
 from .locking import DistributedLockManager
@@ -9,7 +10,7 @@ from .config import CronConfig
 
 logger = logging.getLogger("fastapi_cron.runner")
 
-async def execute_hook(hook: HookFunc, job_name: str, context: dict):
+async def execute_hook(hook: HookFunc, job_name: str, context: dict) -> None:
     """Execute a hook function, handling both sync and async hooks."""
     try:
         if inspect.iscoroutinefunction(hook):
@@ -19,7 +20,7 @@ async def execute_hook(hook: HookFunc, job_name: str, context: dict):
     except Exception as e:
         logger.error(f"[Hook Error][{job_name}] {e}")
 
-async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: DistributedLockManager, config: CronConfig):
+async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: DistributedLockManager, config: CronConfig) -> None:
     """Main job execution loop with distributed locking."""
     logger.info(f"Starting job loop for '{job.name}' - next run at {job.next_run}")
     
@@ -46,7 +47,7 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
                 await state.set_job_status(job.name, "running", config.instance_id)
                 
                 # Create context for hooks
-                context = {
+                context: dict[str, Any] = {
                     "job_name": job.name,
                     "scheduled_time": job.next_run.isoformat(),
                     "actual_time": datetime.now().isoformat(),

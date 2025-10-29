@@ -9,7 +9,7 @@ HookFunc = Union[
 ]
 
 class CronJob:
-    def __init__(self, func: Callable, expr: str, name: Optional[str] = None, tags: Optional[List[str]] = None):
+    def __init__(self, func: Callable, expr: str, name: Optional[str] = None, tags: Optional[List[str]] = None) -> None:
         self.func = func
         self.expr = expr
         self.name = name or func.__name__
@@ -23,29 +23,29 @@ class CronJob:
         self.after_run_hooks: List[HookFunc] = []
         self.on_error_hooks: List[HookFunc] = []
 
-    def update_next_run(self):
+    def update_next_run(self) -> None:
         self.next_run = self._cron_iter.get_next(datetime)
         
-    def add_before_run_hook(self, hook: HookFunc):
+    def add_before_run_hook(self, hook: HookFunc) -> "CronJob":
         """Add a hook to be executed before the job runs."""
         self.before_run_hooks.append(hook)
         return self  # For method chaining
         
-    def add_after_run_hook(self, hook: HookFunc):
+    def add_after_run_hook(self, hook: HookFunc) -> "CronJob":
         """Add a hook to be executed after the job runs successfully."""
         self.after_run_hooks.append(hook)
         return self  # For method chaining
         
-    def add_on_error_hook(self, hook: HookFunc):
+    def add_on_error_hook(self, hook: HookFunc) -> "CronJob":
         """Add a hook to be executed when the job fails."""
         self.on_error_hooks.append(hook)
         return self  # For method chaining
 
-def cron_job(expr: str, *, name=None, tags=None):
+def cron_job(expr: str, *, name: Optional[str] = None, tags: Optional[List[str]] = None) -> Callable:
     """Decorator for creating a cron job."""
     from .scheduler import Crons
     
-    def wrapper(func: Callable):
+    def wrapper(func: Callable) -> Callable:
         # Get or create the global Crons instance
         crons = Crons()
         job = CronJob(func, expr, name=name, tags=tags)
