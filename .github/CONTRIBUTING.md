@@ -19,7 +19,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a wel
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    \`\`\`bash
-   git clone https://github.com/YOUR_USERNAME/fastapi-crons.git
+   git clone https://github.com/me-umar/fastapi-crons.git
    cd fastapi-crons
    \`\`\`
 
