@@ -47,7 +47,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest tests/test_job.py
+        pytest tests/
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
