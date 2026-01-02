@@ -1,4 +1,4 @@
-<h1 align="center"><strong>FASTAPI-CRONS</strong></h1>
+[![Python CI](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml/badge.svg)](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml)<h1 align="center"><strong>FASTAPI-CRONS</strong></h1>
 
 <p align="center"><em>Effortlessly schedule and manage your background tasks.</em></p>
 
