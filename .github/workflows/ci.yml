@@ -42,9 +42,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest  # Install the testing tool
-        pip install .       # This tells the factory: "Install this library and everything it needs"
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest 
+        pip install .     
 
     - name: Run tests
       run: |
