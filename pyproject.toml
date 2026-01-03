@@ -84,7 +84,7 @@ version_variable = [
 #version_toml = [
 #    "project.project.version",
 #]
-build_command = "python -m build"
+build_command = "python -m pip install build && python -m build"
 
 [tool.semantic_release.changelog]
 exclude_commit_patterns = [
