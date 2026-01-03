@@ -90,4 +90,4 @@ build_command = "python -m build"
 exclude_commit_patterns = [
     "chore:*",
     "test:*",
-)
+]
