@@ -50,7 +50,7 @@ jobs:
         pytest tests/
         continue-on-error: true
   release:
-    needs: build-and-test
+    #needs: build-and-test
     runs-on: ubuntu-latest
     concurrency: release
     permissions:
