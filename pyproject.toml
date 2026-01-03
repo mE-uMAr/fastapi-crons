@@ -76,3 +76,18 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+[tool.semantic_release]
+version_variable = [
+    "pyproject.toml:version",
+]
+
+version_toml = [
+    "project.project.version",
+]
+build_command = "python -m build"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    "chore:*",
+    "test:*",
+)
