@@ -81,9 +81,9 @@ version_variable = [
     "pyproject.toml:version",
 ]
 
-version_toml = [
-    "project.project.version",
-]
+#version_toml = [
+#    "project.project.version",
+#]
 build_command = "python -m build"
 
 [tool.semantic_release.changelog]
