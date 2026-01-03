@@ -48,6 +48,29 @@ jobs:
     - name: Run tests
       run: |
         pytest tests/
+        
+  release:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      contents: write 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Python Semantic Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v9.15.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Package to GitHub Release
+        if: steps.release.outputs.released == 'true'
+        uses: python-semantic-release/upload-to-gh-release@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}     
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
