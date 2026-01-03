@@ -1,11 +1,10 @@
-[![Python CI](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml/badge.svg)](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml)<h1 
-                                                                                                                                                                  
-                                                                                                                                                                  align="center"><strong>FASTAPI-CRONS</strong></h1>
-
-# fastapi-crons
-
+[![Python CI](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml/badge.svg)](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml)
 [![PyPI - Version](https://img.shields.io/pypi/v/fastapi-crons)](https://pypi.org/project/fastapi-crons/)
 [![GitHub Release](https://img.shields.io/github/v/release/mE-uMAr/fastapi-crons)](https://github.com/mE-uMAr/fastapi-crons/releases)
+
+<h1                                                                                                                                                           
+                                                                                                                                                                align="center"><strong>FASTAPI-CRONS</strong></h1>
+
 
 <p align="center"><em>Effortlessly schedule and manage your background tasks.</em></p>
 
