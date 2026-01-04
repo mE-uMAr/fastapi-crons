@@ -1,6 +1,6 @@
-[![Python CI](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml/badge.svg)](https://github.com/mincloff/fastapi-crons/actions/workflows/ci.yml)
+[![Python CI](https://github.com/me-umar/fastapi-crons/actions/workflows/ci.yml/badge.svg)](https://github.com/me-umar/fastapi-crons/actions/workflows/ci.yml)
 [![PyPI - Version](https://img.shields.io/pypi/v/fastapi-crons)](https://pypi.org/project/fastapi-crons/)
-[![GitHub Release](https://img.shields.io/github/v/release/mincloff/fastapi-crons)](https://github.com/mincloff/fastapi-crons/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/me-umar/fastapi-crons)](https://github.com/me-umar/fastapi-crons/releases)
 
 <h1                                                                                                                                                           
                                                                                                                                                                 align="center"><strong>FASTAPI-CRONS</strong></h1>
