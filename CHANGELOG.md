@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v0.1.1 (2026-01-04)
+
+### Bug Fixes
+
+- Resolve all CI test failures and lint errors
+  ([`1ce187a`](https://github.com/mE-uMAr/fastapi-crons/commit/1ce187a9ae5516d0d719a7c2d21e94f24e898a57))
+
+- Add requirements.txt with all project dependencies - Add comprehensive .gitignore including .venv
+  - Fix test isolation by resetting global _global_crons state between tests - Fix all ruff lint
+  errors (454 total fixed): - Remove unused imports and variables - Fix trailing whitespace in SQL
+  strings - Update type annotations to use X | Y syntax - Fix exception chaining with 'from e' - Use
+  specific exception types in tests - Fix variable redefinition in test_scheduler - Fix CI workflow
+  syntax (continue-on-error was inside run block)
+
+
 ## v0.1.0 (2026-01-04)
 
 ### Bug Fixes
