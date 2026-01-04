@@ -46,9 +46,7 @@ jobs:
         pip install .     
 
     - name: Run tests
-      run: |
-        pytest tests/
-        continue-on-error: true
+      run: pytest tests/
   release:
     #needs: build-and-test
     runs-on: ubuntu-latest

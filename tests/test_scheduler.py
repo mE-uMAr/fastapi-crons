@@ -1,8 +1,8 @@
 """Tests for Crons scheduler class."""
+
 import pytest
-import asyncio
-from fastapi_crons import Crons, CronConfig
-from fastapi_crons.locking import LocalLockBackend, DistributedLockManager
+
+from fastapi_crons import CronConfig, Crons
 
 
 class TestCronsScheduler:
@@ -18,13 +18,13 @@ class TestCronsScheduler:
         """Test Crons initialization with custom config."""
         config = CronConfig()
         config.enable_distributed_locking = True
-        
+
         crons = Crons(
             state_backend=sqlite_backend,
             lock_manager=lock_manager,
             config=config
         )
-        
+
         assert crons.config.enable_distributed_locking is True
 
     def test_register_job_with_decorator(self, crons_instance):
@@ -61,7 +61,7 @@ class TestCronsScheduler:
     def test_get_job_by_name(self, crons_instance):
         """Test retrieving a specific job by name."""
         @crons_instance.cron("* * * * *", name="specific_job")
-        def job():
+        def specific_job_func():
             pass
 
         job = crons_instance.get_job("specific_job")
@@ -83,7 +83,7 @@ class TestCronsScheduler:
             pass
 
         crons_instance.add_before_run_hook(hook, job_name="job1")
-        
+
         job = crons_instance.get_job("job1")
         assert hook in job.before_run_hooks
 
@@ -101,7 +101,7 @@ class TestCronsScheduler:
             pass
 
         crons_instance.add_before_run_hook(hook)
-        
+
         assert hook in crons_instance.get_job("job1").before_run_hooks
         assert hook in crons_instance.get_job("job2").before_run_hooks
 
@@ -120,7 +120,7 @@ class TestCronsScheduler:
         result = (crons_instance
                   .add_before_run_hook(hook1)
                   .add_after_run_hook(hook2))
-        
+
         assert result == crons_instance
 
     @pytest.mark.asyncio
@@ -132,7 +132,7 @@ class TestCronsScheduler:
 
         await crons_instance.start()
         assert crons_instance._running is True
-        
+
         await crons_instance.stop()
 
     @pytest.mark.asyncio
@@ -144,7 +144,7 @@ class TestCronsScheduler:
 
         await crons_instance.start()
         await crons_instance.stop()
-        
+
         assert crons_instance._running is False
 
     @pytest.mark.asyncio
@@ -156,13 +156,13 @@ class TestCronsScheduler:
 
         await crons_instance.start()
         initial_tasks = len(crons_instance._tasks)
-        
+
         # Try to start again
         await crons_instance.start()
-        
+
         # Should not create duplicate tasks
         assert len(crons_instance._tasks) == initial_tasks
-        
+
         await crons_instance.stop()
 
     @pytest.mark.asyncio

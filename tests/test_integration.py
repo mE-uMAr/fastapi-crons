@@ -1,9 +1,9 @@
 """Integration tests for fastapi-crons."""
-import pytest
 import asyncio
-from datetime import datetime
-from fastapi import FastAPI
+
+import pytest
 from fastapi.testclient import TestClient
+
 from fastapi_crons import Crons, get_cron_router
 
 
@@ -51,7 +51,7 @@ class TestIntegration:
         fastapi_app.include_router(get_cron_router())
 
         client = TestClient(fastapi_app)
-        
+
         # Test the cron endpoint
         response = client.get("/")
         assert response.status_code == 200

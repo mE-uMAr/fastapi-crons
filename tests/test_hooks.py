@@ -1,6 +1,8 @@
 """Tests for job hooks functionality."""
-import pytest
 import asyncio
+
+import pytest
+
 from fastapi_crons import CronJob
 
 

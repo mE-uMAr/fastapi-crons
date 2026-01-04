@@ -1,6 +1,4 @@
 """Tests for CronConfig class."""
-import pytest
-import os
 from fastapi_crons import CronConfig
 
 
@@ -10,7 +8,7 @@ class TestCronConfig:
     def test_default_config(self):
         """Test default configuration values."""
         config = CronConfig()
-        
+
         assert config.sqlite_db_path == "cron_state.db"
         assert config.redis_host == "localhost"
         assert config.redis_port == 6379
@@ -25,9 +23,9 @@ class TestCronConfig:
         monkeypatch.setenv("CRON_REDIS_PORT", "6380")
         monkeypatch.setenv("CRON_ENABLE_DISTRIBUTED_LOCKING", "true")
         monkeypatch.setenv("CRON_LOCK_TTL", "600")
-        
+
         config = CronConfig()
-        
+
         assert config.sqlite_db_path == "/tmp/test.db"
         assert config.redis_host == "redis.example.com"
         assert config.redis_port == 6380

@@ -1,8 +1,10 @@
 """Tests for CronJob class and job creation."""
-import pytest
 from datetime import datetime
-from fastapi_crons import CronJob, cron_job
-from croniter import croniter
+
+import pytest
+from croniter import CroniterBadCronError
+
+from fastapi_crons import CronJob
 
 
 class TestCronJob:
@@ -14,7 +16,7 @@ class TestCronJob:
             pass
 
         job = CronJob(sample_job, "*/5 * * * *", name="test_job")
-        
+
         assert job.name == "test_job"
         assert job.expr == "*/5 * * * *"
         assert job.func == sample_job
@@ -27,7 +29,7 @@ class TestCronJob:
             pass
 
         job = CronJob(sample_job, "0 0 * * *", name="daily_job", tags=["daily", "maintenance"])
-        
+
         assert job.tags == ["daily", "maintenance"]
 
     def test_job_name_defaults_to_function_name(self):
@@ -44,7 +46,7 @@ class TestCronJob:
             pass
 
         job = CronJob(sample_job, "*/5 * * * *")
-        
+
         assert job.next_run is not None
         assert isinstance(job.next_run, datetime)
         # Next run should be in the future
@@ -57,10 +59,10 @@ class TestCronJob:
 
         job = CronJob(sample_job, "*/5 * * * *")
         first_next_run = job.next_run
-        
+
         job.update_next_run()
         second_next_run = job.next_run
-        
+
         # Both should be in the future
         assert first_next_run > datetime.now()
         assert second_next_run > datetime.now()
@@ -71,7 +73,7 @@ class TestCronJob:
             pass
 
         job = CronJob(sample_job, "* * * * *")
-        
+
         assert job.before_run_hooks == []
         assert job.after_run_hooks == []
         assert job.on_error_hooks == []
@@ -86,7 +88,7 @@ class TestCronJob:
 
         job = CronJob(sample_job, "* * * * *")
         result = job.add_before_run_hook(hook)
-        
+
         assert hook in job.before_run_hooks
         assert result == job  # Test method chaining
 
@@ -100,7 +102,7 @@ class TestCronJob:
 
         job = CronJob(sample_job, "* * * * *")
         result = job.add_after_run_hook(hook)
-        
+
         assert hook in job.after_run_hooks
         assert result == job  # Test method chaining
 
@@ -114,7 +116,7 @@ class TestCronJob:
 
         job = CronJob(sample_job, "* * * * *")
         result = job.add_on_error_hook(hook)
-        
+
         assert hook in job.on_error_hooks
         assert result == job  # Test method chaining
 
@@ -132,7 +134,7 @@ class TestCronJob:
         job = CronJob(sample_job, "* * * * *")
         job.add_before_run_hook(hook1)
         job.add_before_run_hook(hook2)
-        
+
         assert len(job.before_run_hooks) == 2
         assert hook1 in job.before_run_hooks
         assert hook2 in job.before_run_hooks
@@ -142,7 +144,7 @@ class TestCronJob:
         def sample_job():
             pass
 
-        with pytest.raises(Exception):
+        with pytest.raises(CroniterBadCronError):
             CronJob(sample_job, "invalid cron expression")
 
     def test_valid_cron_expressions(self):

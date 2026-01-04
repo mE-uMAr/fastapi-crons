@@ -1,12 +1,19 @@
 """Pytest configuration and shared fixtures for fastapi-crons tests."""
-import pytest
 import asyncio
-import tempfile
 import os
-from pathlib import Path
+import tempfile
+
+import pytest
 from fastapi import FastAPI
-from fastapi_crons import Crons, CronConfig, SQLiteStateBackend
-from fastapi_crons.locking import LocalLockBackend, DistributedLockManager
+
+import fastapi_crons.scheduler as scheduler_module
+from fastapi_crons import CronConfig, Crons, SQLiteStateBackend
+from fastapi_crons.locking import DistributedLockManager, LocalLockBackend
+
+
+def reset_global_crons():
+    """Reset the global crons instance to ensure test isolation."""
+    scheduler_module._global_crons = None
 
 
 @pytest.fixture
@@ -52,6 +59,8 @@ def lock_manager(cron_config):
 @pytest.fixture
 def crons_instance(sqlite_backend, lock_manager, cron_config):
     """Create a Crons instance for testing."""
+    # Reset global state to ensure test isolation
+    reset_global_crons()
     crons = Crons(
         state_backend=sqlite_backend,
         lock_manager=lock_manager,
@@ -69,6 +78,8 @@ def fastapi_app():
 @pytest.fixture
 def crons_with_app(fastapi_app, sqlite_backend, lock_manager, cron_config):
     """Create a Crons instance integrated with FastAPI app."""
+    # Reset global state to ensure test isolation
+    reset_global_crons()
     crons = Crons(
         app=fastapi_app,
         state_backend=sqlite_backend,
