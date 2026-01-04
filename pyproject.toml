@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi-crons"
-version = "2.0.1"
+version = "2.2.0"
 description = "Cron scheduling extension for FastAPI with decorators, async support, Hooks, CLI, and SQLite job tracking."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -75,4 +75,19 @@ exclude_lines = [
   "raise NotImplementedError",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
+]
+[tool.semantic_release]
+version_variable = [
+    "pyproject.toml:version",
+]
+
+#version_toml = [
+#    "project.project.version",
+#]
+build_command = "python -m pip install build && python -m build"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    "chore:*",
+    "test:*",
 ]
