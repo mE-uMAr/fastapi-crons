@@ -1,15 +1,24 @@
 import asyncio
 import inspect
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
+from . import __version__
 from .config import CronConfig
 from .scheduler import Crons
+
+# Track server start time for uptime calculation
+_server_start_time: float | None = None
 
 
 def get_cron_router():
     """Get the cron management router with automatic initialization."""
+    global _server_start_time
+    if _server_start_time is None:
+        _server_start_time = time.time()
+
     router = APIRouter()
 
     # Initialize configuration and scheduler
@@ -36,6 +45,11 @@ def get_cron_router():
                     "before_run": len(job.before_run_hooks),
                     "after_run": len(job.after_run_hooks),
                     "on_error": len(job.on_error_hooks)
+                },
+                "config": {
+                    "max_retries": job.max_retries,
+                    "retry_delay": job.retry_delay,
+                    "timeout": job.timeout,
                 }
             }
 
@@ -44,6 +58,80 @@ def get_cron_router():
 
             result.append(job_data)
         return result
+
+    @router.get("/health")
+    async def health_check():
+        """
+        Health check endpoint for monitoring and liveness probes.
+
+        Returns system health status including:
+        - status: "healthy", "degraded", or "unhealthy"
+        - version: Package version
+        - uptime: Server uptime in seconds
+        - jobs_total: Total registered jobs
+        - jobs_running: Currently running jobs
+        - jobs_failed: Jobs in failed state
+        - backend_connected: State backend connectivity
+        - lock_backend_type: Type of lock backend in use
+        """
+        jobs = crons.get_jobs()
+        backend = crons.state_backend
+
+        # Count job statuses
+        running_count = 0
+        failed_count = 0
+        completed_count = 0
+        backend_connected = True
+
+        try:
+            for job in jobs:
+                status_info = await backend.get_job_status(job.name)
+                if status_info:
+                    if status_info['status'] == 'running':
+                        running_count += 1
+                    elif status_info['status'] == 'failed':
+                        failed_count += 1
+                    elif status_info['status'] == 'completed':
+                        completed_count += 1
+        except Exception:
+            backend_connected = False
+
+        # Determine overall status
+        # healthy: all systems operational
+        # degraded: some jobs failed but system is working
+        # unhealthy: critical issues like backend disconnection
+        if not backend_connected:
+            status = "unhealthy"
+        elif failed_count > 0:
+            status = "degraded"
+        else:
+            status = "healthy"
+
+        # Calculate uptime
+        uptime = time.time() - _server_start_time if _server_start_time else 0
+
+        return {
+            "status": status,
+            "version": __version__,
+            "uptime_seconds": round(uptime, 2),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "instance_id": config.instance_id,
+            "jobs": {
+                "total": len(jobs),
+                "running": running_count,
+                "completed": completed_count,
+                "failed": failed_count,
+            },
+            "backend": {
+                "type": type(backend).__name__,
+                "connected": backend_connected,
+            },
+            "config": {
+                "distributed_locking": config.enable_distributed_locking,
+                "default_timeout": config.default_job_timeout,
+                "default_max_retries": config.default_max_retries,
+            }
+        }
 
     @router.get("/system/status")
     async def get_system_status():
@@ -163,7 +251,7 @@ def get_cron_router():
             context = {
                 "job_name": job.name,
                 "manual_trigger": True,
-                "trigger_time": datetime.now().isoformat(),
+                "trigger_time": datetime.now(timezone.utc).isoformat(),
                 "tags": job.tags,
                 "expr": job.expr,
                 "instance_id": config.instance_id,
@@ -173,7 +261,7 @@ def get_cron_router():
             for hook in job.before_run_hooks:
                 await execute_hook(hook, job.name, context)
 
-            start_time = datetime.now()
+            start_time = datetime.now(timezone.utc)
 
             try:
                 if asyncio.iscoroutinefunction(job.func):
@@ -181,7 +269,7 @@ def get_cron_router():
                 else:
                     result = await asyncio.to_thread(job.func)
 
-                end_time = datetime.now()
+                end_time = datetime.now(timezone.utc)
                 duration = (end_time - start_time).total_seconds()
 
                 job.last_run = end_time
@@ -201,12 +289,11 @@ def get_cron_router():
                 for hook in job.after_run_hooks:
                     await execute_hook(hook, job.name, context)
 
-                # Log execution if backend supports it
-                if hasattr(crons.state_backend, 'log_job_execution'):
-                    await crons.state_backend.log_job_execution(
-                        job_name, config.instance_id, "completed",
-                        start_time, end_time, duration
-                    )
+                # Log execution
+                await crons.state_backend.log_job_execution(
+                    job_name, config.instance_id, "completed",
+                    start_time, end_time, duration
+                )
 
                 return {
                     "status": "success",
@@ -216,7 +303,7 @@ def get_cron_router():
                 }
 
             except Exception as e:
-                end_time = datetime.now()
+                end_time = datetime.now(timezone.utc)
                 duration = (end_time - start_time).total_seconds()
                 error_msg = str(e)
 
@@ -235,12 +322,11 @@ def get_cron_router():
                 for hook in job.on_error_hooks:
                     await execute_hook(hook, job.name, context)
 
-                # Log execution if backend supports it
-                if hasattr(crons.state_backend, 'log_job_execution'):
-                    await crons.state_backend.log_job_execution(
-                        job_name, config.instance_id, "failed",
-                        start_time, end_time, duration, error_msg
-                    )
+                # Log execution
+                await crons.state_backend.log_job_execution(
+                    job_name, config.instance_id, "failed",
+                    start_time, end_time, duration, error_msg
+                )
 
                 raise HTTPException(status_code=500, detail=f"Job execution failed: {error_msg}") from e
 

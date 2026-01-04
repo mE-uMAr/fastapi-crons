@@ -1,5 +1,5 @@
 """Tests for CronJob class and job creation."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from croniter import CroniterBadCronError
@@ -50,7 +50,7 @@ class TestCronJob:
         assert job.next_run is not None
         assert isinstance(job.next_run, datetime)
         # Next run should be in the future
-        assert job.next_run > datetime.now()
+        assert job.next_run > datetime.now(timezone.utc)
 
     def test_job_update_next_run(self):
         """Test updating next_run timestamp."""
@@ -64,8 +64,8 @@ class TestCronJob:
         second_next_run = job.next_run
 
         # Both should be in the future
-        assert first_next_run > datetime.now()
-        assert second_next_run > datetime.now()
+        assert first_next_run > datetime.now(timezone.utc)
+        assert second_next_run > datetime.now(timezone.utc)
 
     def test_job_hooks_initialization(self):
         """Test that job hooks are initialized as empty lists."""

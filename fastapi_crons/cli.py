@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from datetime import datetime
+from datetime import datetime, timezone
 
 import typer
 from rich.console import Console
@@ -220,7 +220,7 @@ def run_job(
                 context = {
                     "job_name": target_job.name,
                     "manual_trigger": True,
-                    "trigger_time": datetime.now().isoformat(),
+                    "trigger_time": datetime.now(timezone.utc).isoformat(),
                     "tags": target_job.tags,
                     "expr": target_job.expr,
                 }
@@ -229,7 +229,7 @@ def run_job(
                 for hook in target_job.before_run_hooks:
                     await execute_hook(hook, target_job.name, context)
 
-                start_time = datetime.now()
+                start_time = datetime.now(timezone.utc)
 
                 try:
                     if asyncio.iscoroutinefunction(target_job.func):
@@ -237,7 +237,7 @@ def run_job(
                     else:
                         result = await asyncio.to_thread(target_job.func)
 
-                    end_time = datetime.now()
+                    end_time = datetime.now(timezone.utc)
                     duration = (end_time - start_time).total_seconds()
 
                     # Update last run
@@ -259,17 +259,16 @@ def run_job(
                         await execute_hook(hook, target_job.name, context)
 
                     # Log execution
-                    if hasattr(backend, 'log_job_execution'):
-                        await backend.log_job_execution(
-                            name, config.instance_id, "completed",
-                            start_time, end_time, duration
-                        )
+                    await backend.log_job_execution(
+                        name, config.instance_id, "completed",
+                        start_time, end_time, duration
+                    )
 
                     progress.remove_task(task)
                     console.print(f"[green]✓ Job '{name}' completed successfully in {duration:.2f}s[/green]")
 
                 except Exception as e:
-                    end_time = datetime.now()
+                    end_time = datetime.now(timezone.utc)
                     duration = (end_time - start_time).total_seconds()
                     error_msg = str(e)
 
@@ -289,11 +288,10 @@ def run_job(
                         await execute_hook(hook, target_job.name, context)
 
                     # Log execution
-                    if hasattr(backend, 'log_job_execution'):
-                        await backend.log_job_execution(
-                            name, config.instance_id, "failed",
-                            start_time, end_time, duration, error_msg
-                        )
+                    await backend.log_job_execution(
+                        name, config.instance_id, "failed",
+                        start_time, end_time, duration, error_msg
+                    )
 
                     progress.remove_task(task)
                     console.print(f"[red]✗ Job '{name}' failed after {duration:.2f}s: {error_msg}[/red]")
@@ -411,13 +409,10 @@ def logs(
 ):
     """Show job execution logs."""
     async def run():
-        backend = get_state_backend()
+        _ = get_state_backend()  # Ensure backend is available
 
-        if not hasattr(backend, 'log_job_execution'):
-            console.print("[yellow]Log viewing not supported with current backend[/yellow]")
-            return
-
-        # This would require additional implementation in the state backend
+        # TODO: Implement get_execution_logs method in state backends
+        # For now, show a placeholder message
         console.print("[yellow]Log viewing feature coming soon[/yellow]")
 
     asyncio.run(run())

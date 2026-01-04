@@ -59,9 +59,9 @@ class Crons:
                 lock_backend = LocalLockBackend()
                 self.lock_manager = DistributedLockManager(lock_backend, self.config)
 
-        # If there's a global instance, inherit its jobs
+        # If there's a global instance, inherit its jobs (copy to avoid shared mutation)
         if _global_crons and _global_crons != self:
-            self.jobs = _global_crons.jobs
+            self.jobs = list(_global_crons.jobs)
 
         # Set as global instance
         _global_crons = self
@@ -148,10 +148,39 @@ class Crons:
         # Stop lock manager
         await self.lock_manager.cleanup()
 
-    def cron(self, expr: str, *, name: str | None = None, tags: list[str] | None = None) -> Callable:
-        """Decorator for creating cron jobs."""
+    def cron(
+        self,
+        expr: str,
+        *,
+        name: str | None = None,
+        tags: list[str] | None = None,
+        max_retries: int | None = None,
+        retry_delay: float | None = None,
+        retry_on: tuple[type[Exception], ...] | None = None,
+        timeout: float | None = None,
+    ) -> Callable:
+        """Decorator for creating cron jobs with optional retry and timeout configuration.
+
+        Args:
+            expr: Cron expression (e.g., "*/5 * * * *" for every 5 minutes)
+            name: Job name (defaults to function name)
+            tags: List of tags for categorization
+            max_retries: Maximum retry attempts on failure (None = use config default)
+            retry_delay: Initial delay between retries in seconds (None = use config default)
+            retry_on: Tuple of exception types to retry on (None = retry on all exceptions)
+            timeout: Job timeout in seconds (None = use config default, 0 = no timeout)
+        """
         def wrapper(func: Callable) -> Callable:
-            job = CronJob(func, expr, name=name, tags=tags)
+            job = CronJob(
+                func,
+                expr,
+                name=name,
+                tags=tags,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+                retry_on=retry_on,
+                timeout=timeout,
+            )
             self.jobs.append(job)
             logger.info(f"Registered cron job '{job.name}' with expression '{expr}'")
 

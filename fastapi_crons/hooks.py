@@ -3,7 +3,7 @@ Pre-built hooks for common use cases like logging, metrics, alerts, and webhooks
 """
 import logging
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import aiohttp
@@ -14,7 +14,7 @@ logger = logging.getLogger("fastapi_cron")
 # Logging hooks
 def log_job_start(job_name: str, context: dict[str, Any]):
     """Log when a job starts."""
-    logger.info(f"Job '{job_name}' started at {datetime.now().isoformat()}")
+    logger.info(f"Job '{job_name}' started at {datetime.now(timezone.utc).isoformat()}")
 
 def log_job_success(job_name: str, context: dict[str, Any]):
     """Log when a job completes successfully."""
@@ -43,7 +43,7 @@ async def webhook_notification(url: str, include_context: bool = True):
     async def hook(job_name: str, context: dict[str, Any]):
         payload = {
             "job_name": job_name,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": "before_run" if "success" not in context else
                           "after_run" if context.get("success") else "on_error"
         }

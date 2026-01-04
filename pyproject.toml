@@ -36,6 +36,10 @@ dev = [
   "build>=1.0.0",
   "twine>=4.0.0",
 ]
+otel = [
+  "opentelemetry-api>=1.0.0",
+  "opentelemetry-sdk>=1.0.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/me-umar/fastapi-crons"

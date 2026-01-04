@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS job_state (
 ### Configuration
 By default, job state is stored in a SQLite database named `cron_state.db` in the current directory. You can customize the database path:
 ```python
-from fastapi_cron import Crons, SQLiteStateBackend
+from fastapi_crons import Crons, SQLiteStateBackend
 
 # Custom database path
 state_backend = SQLiteStateBackend(db_path="/path/to/my_crons.db")
@@ -160,10 +160,10 @@ Jobs can be:
 
 ```bash
 # List all registered jobs
-fastapi_cron list
+fastapi-crons list
 
 # Manually run a specific job
-fastapi_cron run_job < job_name >
+fastapi-crons run_job <job_name>
 ```
 
 >
