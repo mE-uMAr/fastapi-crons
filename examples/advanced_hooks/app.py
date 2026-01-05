@@ -17,22 +17,20 @@ Then visit:
 """
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI
 
 from fastapi_crons import (
     Crons,
+    alert_on_failure,
+    alert_on_long_duration,
     get_cron_router,
+    log_job_error,
     # Built-in hooks
     log_job_start,
     log_job_success,
-    log_job_error,
-    alert_on_failure,
-    alert_on_long_duration,
     metrics_collector,
-    webhook_notification,
 )
 
 # =============================================================================
@@ -66,7 +64,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 def custom_before_hook(job_name: str, context: dict[str, Any]):
     """
     Custom before-run hook.
-    
+
     This hook is called BEFORE the job function executes.
     Use it for:
     - Logging job start
@@ -82,7 +80,7 @@ def custom_before_hook(job_name: str, context: dict[str, Any]):
 def custom_after_hook(job_name: str, context: dict[str, Any]):
     """
     Custom after-run hook.
-    
+
     This hook is called AFTER the job completes SUCCESSFULLY.
     Use it for:
     - Logging success
@@ -92,7 +90,7 @@ def custom_after_hook(job_name: str, context: dict[str, Any]):
     """
     duration = context.get("duration", 0)
     result = context.get("result")
-    
+
     logger.info(f"✅ [AFTER] Job '{job_name}' completed successfully")
     logger.info(f"   Duration: {duration:.2f}s")
     logger.info(f"   Result: {result}")
@@ -101,7 +99,7 @@ def custom_after_hook(job_name: str, context: dict[str, Any]):
 def custom_error_hook(job_name: str, context: dict[str, Any]):
     """
     Custom on-error hook.
-    
+
     This hook is called when the job FAILS.
     Use it for:
     - Logging errors
@@ -111,7 +109,7 @@ def custom_error_hook(job_name: str, context: dict[str, Any]):
     """
     error = context.get("error", "Unknown error")
     duration = context.get("duration", 0)
-    
+
     logger.error(f"❌ [ERROR] Job '{job_name}' failed!")
     logger.error(f"   Duration: {duration:.2f}s")
     logger.error(f"   Error: {error}")
@@ -120,7 +118,7 @@ def custom_error_hook(job_name: str, context: dict[str, Any]):
 async def async_notification_hook(job_name: str, context: dict[str, Any]):
     """
     Async hook for sending notifications.
-    
+
     Hooks can be async! Use async hooks for:
     - Making HTTP requests
     - Sending emails
@@ -128,22 +126,22 @@ async def async_notification_hook(job_name: str, context: dict[str, Any]):
     - Calling external APIs
     """
     import asyncio
-    
+
     # Simulate sending a notification
     logger.info(f"📧 Sending notification for job '{job_name}'...")
     await asyncio.sleep(0.1)  # Simulate network call
-    logger.info(f"📧 Notification sent!")
+    logger.info("📧 Notification sent!")
 
 
 def performance_tracking_hook(job_name: str, context: dict[str, Any]):
     """
     Hook for tracking job performance.
-    
+
     Records execution time and sends alerts for slow jobs.
     """
     duration = context.get("duration", 0)
     threshold = 5.0  # 5 seconds
-    
+
     if duration > threshold:
         logger.warning(
             f"⚠️ SLOW JOB: '{job_name}' took {duration:.2f}s "
@@ -160,7 +158,7 @@ def performance_tracking_hook(job_name: str, context: dict[str, Any]):
 def job_with_individual_hooks():
     """
     Job with hooks attached individually.
-    
+
     Hooks are attached using the .add_*_hook() methods.
     """
     logger.info("Executing job with individual hooks...")
@@ -199,7 +197,7 @@ if logged_job:
 async def job_with_metrics():
     """
     Job with metrics collection.
-    
+
     Uses the built-in metrics_collector to track:
     - Job run count
     - Success/failure counts
@@ -207,14 +205,14 @@ async def job_with_metrics():
     """
     import asyncio
     import random
-    
+
     # Simulate variable execution time
     await asyncio.sleep(random.uniform(0.1, 1.0))
-    
+
     # Occasionally fail to demonstrate failure metrics
     if random.random() < 0.1:  # 10% failure rate
         raise ValueError("Random failure for testing")
-    
+
     return "Metrics job completed"
 
 
@@ -231,17 +229,17 @@ if metrics_job:
 async def potentially_slow_job():
     """
     Job that might take a long time.
-    
+
     Uses alert_on_long_duration hook to send alerts
     when the job exceeds a time threshold.
     """
     import asyncio
     import random
-    
+
     # Simulate variable execution time (sometimes slow)
     delay = random.uniform(0.5, 3.0)
     await asyncio.sleep(delay)
-    
+
     return f"Completed in {delay:.2f}s"
 
 

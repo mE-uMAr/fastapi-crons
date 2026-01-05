@@ -24,13 +24,11 @@ from fastapi import FastAPI
 
 from fastapi_crons import (
     Crons,
-    get_cron_router,
-    # Retry utilities
-    RetryConfig,
-    retry_on_failure,
-    execute_with_retry,
     # Timeout error
-    JobTimeoutError,
+    RetryConfig,
+    execute_with_retry,
+    get_cron_router,
+    retry_on_failure,
 )
 
 # =============================================================================
@@ -63,22 +61,18 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 
 class TransientError(Exception):
     """A transient error that can be retried."""
-    pass
 
 
 class PermanentError(Exception):
     """A permanent error that should not be retried."""
-    pass
 
 
 class NetworkError(Exception):
     """Simulated network error."""
-    pass
 
 
 class DatabaseError(Exception):
     """Simulated database error."""
-    pass
 
 
 # =============================================================================
@@ -88,7 +82,7 @@ class DatabaseError(Exception):
 def on_retry_callback(attempt: int, exception: Exception, delay: float):
     """
     Callback function called on each retry attempt.
-    
+
     Use this for:
     - Logging retry attempts
     - Sending alerts
@@ -115,16 +109,16 @@ def on_retry_callback(attempt: int, exception: Exception, delay: float):
 async def job_with_retry():
     """
     Job configured with retry at the decorator level.
-    
+
     Using decorator parameters is the simplest way to add retry.
     The job will retry up to 3 times with exponential backoff.
     """
     logger.info("Executing job with retry...")
-    
+
     # Simulate occasional failures
     if random.random() < 0.7:  # 70% failure rate for demo
         raise TransientError("Simulated transient failure")
-    
+
     return "Success after retries!"
 
 
@@ -140,22 +134,22 @@ async def job_with_retry():
 async def job_with_filtered_retry():
     """
     Job that only retries on specific exception types.
-    
+
     NetworkError and TransientError will be retried.
     PermanentError will NOT be retried.
     """
     logger.info("Executing filtered retry job...")
-    
+
     # Simulate different error types
     error_type = random.choice(["network", "transient", "permanent", "success"])
-    
+
     if error_type == "network":
         raise NetworkError("Connection refused")
     elif error_type == "transient":
         raise TransientError("Temporary failure")
     elif error_type == "permanent":
         raise PermanentError("This error will NOT be retried")
-    
+
     return "Success!"
 
 
@@ -173,18 +167,18 @@ async def job_with_filtered_retry():
 async def job_with_timeout():
     """
     Job with a 5-second timeout.
-    
+
     If the job takes longer than 5 seconds, it will be cancelled
     and a JobTimeoutError will be raised.
     """
     logger.info("Starting job with 5 second timeout...")
-    
+
     # Simulate variable execution time
     delay = random.uniform(1, 8)  # Sometimes exceeds timeout
     logger.info(f"  Job will take {delay:.2f} seconds...")
-    
+
     await asyncio.sleep(delay)
-    
+
     logger.info("Job completed within timeout!")
     return f"Completed in {delay:.2f}s"
 
@@ -201,27 +195,27 @@ async def job_with_timeout():
 async def job_with_retry_and_timeout():
     """
     Job with both retry AND timeout.
-    
+
     - Timeout: 3 seconds per attempt
     - Retries: Up to 2 retries
-    
+
     Note: Timeouts are NOT retried by default because they indicate
     a job that's taking too long, not a transient failure.
     """
     logger.info("Executing job with retry and timeout...")
-    
+
     # Simulate work that might timeout or fail
     delay = random.uniform(1, 5)
-    
+
     if delay > 3:
         logger.info(f"  This attempt will timeout ({delay:.2f}s > 3s timeout)")
-    
+
     await asyncio.sleep(delay)
-    
+
     # Also simulate occasional errors
     if random.random() < 0.3:
         raise TransientError("Random failure")
-    
+
     return f"Completed in {delay:.2f}s"
 
 
@@ -241,15 +235,15 @@ async def job_with_retry_and_timeout():
 async def fetch_data_with_retry(url: str) -> dict:
     """
     Standalone function with retry decorator.
-    
+
     This can be used for any function, not just cron jobs.
     """
     logger.info(f"Fetching data from {url}...")
-    
+
     # Simulate network request
     if random.random() < 0.6:
         raise NetworkError(f"Failed to connect to {url}")
-    
+
     return {"url": url, "data": "sample response", "timestamp": datetime.now().isoformat()}
 
 
@@ -276,7 +270,7 @@ async def fetch_job():
 async def dynamic_retry_job():
     """
     Job demonstrating dynamic retry configuration.
-    
+
     Uses execute_with_retry() for cases where you need to configure
     retry behavior at runtime.
     """
@@ -289,13 +283,13 @@ async def dynamic_retry_job():
         jitter=True,
         retry_on=(NetworkError, DatabaseError),  # Only retry these
     )
-    
+
     async def unstable_operation():
         """Operation that might fail."""
         if random.random() < 0.5:
             raise random.choice([NetworkError, DatabaseError])("Random failure")
         return {"status": "ok"}
-    
+
     try:
         result = await execute_with_retry(
             unstable_operation,

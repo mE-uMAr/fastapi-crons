@@ -17,6 +17,7 @@ Then visit:
 """
 
 from datetime import datetime
+
 from fastapi import FastAPI
 
 # Import the core components from fastapi-crons
@@ -51,7 +52,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 def simple_sync_job():
     """
     A simple synchronous cron job that runs every minute.
-    
+
     Cron Expression: * * * * *
     ┌───────────── minute (0-59) - every minute (*)
     │ ┌───────────── hour (0-23) - every hour (*)
@@ -69,21 +70,21 @@ def simple_sync_job():
 async def async_periodic_job():
     """
     An async cron job that runs every 5 minutes.
-    
+
     Use async jobs when you need to:
     - Make HTTP requests
     - Query databases
     - Perform I/O operations
     """
     import asyncio
-    
+
     print(f"[{datetime.now()}] Starting async job...")
-    
+
     # Simulate async work (e.g., API call, database query)
     await asyncio.sleep(1)
-    
+
     print(f"[{datetime.now()}] Async job completed!")
-    
+
     return {"status": "success", "timestamp": datetime.now().isoformat()}
 
 
@@ -92,21 +93,21 @@ async def async_periodic_job():
 async def hourly_cleanup():
     """
     A maintenance job that runs at the start of every hour.
-    
+
     Tags help you organize and filter jobs:
     - maintenance: System maintenance tasks
     - cleanup: Cleanup and housekeeping
-    
+
     Cron Expression: 0 * * * *
     - Runs at minute 0 of every hour
     """
     print(f"[{datetime.now()}] Running hourly cleanup...")
-    
+
     # Example cleanup operations:
     # - Clear temporary files
     # - Purge old cache entries
     # - Archive old logs
-    
+
     return "Cleanup completed"
 
 
@@ -115,17 +116,17 @@ async def hourly_cleanup():
 async def generate_daily_report():
     """
     A job that runs daily at midnight.
-    
+
     Cron Expression: 0 0 * * *
     - Runs at 00:00 (midnight) every day
     """
     print(f"[{datetime.now()}] Generating daily report...")
-    
+
     # Example report generation:
     # - Aggregate daily statistics
     # - Generate PDF/Excel reports
     # - Send email summaries
-    
+
     return "Daily report generated"
 
 
@@ -134,17 +135,17 @@ async def generate_daily_report():
 def weekly_backup():
     """
     A job that runs weekly on Sunday at midnight.
-    
+
     Cron Expression: 0 0 * * 0
     - Runs at 00:00 every Sunday (0 = Sunday)
     """
     print(f"[{datetime.now()}] Running weekly backup...")
-    
+
     # Example backup operations:
     # - Database backup
     # - File system snapshots
     # - Offsite replication
-    
+
     return "Backup completed"
 
 
@@ -171,7 +172,7 @@ def root():
 async def jobs_summary():
     """Get a summary of all registered jobs."""
     jobs = crons.get_jobs()
-    
+
     return {
         "total_jobs": len(jobs),
         "jobs": [

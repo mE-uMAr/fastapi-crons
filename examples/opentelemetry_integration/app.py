@@ -9,7 +9,7 @@ This example demonstrates:
 Requirements:
     pip install fastapi-crons[otel]
     pip install opentelemetry-exporter-otlp-proto-grpc  # For OTLP export
-    
+
     # Optional: Run Jaeger for trace visualization
     docker run -d --name jaeger \
       -p 16686:16686 \
@@ -34,7 +34,6 @@ from fastapi import FastAPI
 from fastapi_crons import (
     Crons,
     get_cron_router,
-    log_job_start,
     is_otel_available,
 )
 
@@ -44,36 +43,42 @@ from fastapi_crons import (
 
 # Check if OpenTelemetry is available
 if is_otel_available():
-    from opentelemetry import trace, metrics
-    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry import metrics, trace
     from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
+    from opentelemetry.sdk.metrics.export import (
+        ConsoleMetricExporter,
+        PeriodicExportingMetricReader,
+    )
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
     from fastapi_crons.telemetry import OpenTelemetryHooks
-    
+
     # Try to import OTLP exporter (optional)
     try:
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+            OTLPMetricExporter,  # noqa: F401
+        )
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
         OTLP_AVAILABLE = True
     except ImportError:
         OTLP_AVAILABLE = False
-    
+
     # Create resource with service name
     resource = Resource.create({
         "service.name": "fastapi-crons-example",
         "service.version": "1.0.0",
         "deployment.environment": "development",
     })
-    
+
     # Setup tracing
     tracer_provider = TracerProvider(resource=resource)
-    
+
     # Add span processors
     # Console exporter for development (prints to stdout)
     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-    
+
     # OTLP exporter for production (sends to Jaeger/OTLP collector)
     if OTLP_AVAILABLE:
         try:
@@ -81,9 +86,9 @@ if is_otel_available():
             tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
         except Exception as e:
             logging.warning(f"Could not connect to OTLP collector: {e}")
-    
+
     trace.set_tracer_provider(tracer_provider)
-    
+
     # Setup metrics
     # Console exporter for development
     metric_reader = PeriodicExportingMetricReader(
@@ -92,7 +97,7 @@ if is_otel_available():
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
-    
+
     OTEL_CONFIGURED = True
     logging.info("✅ OpenTelemetry configured successfully")
 else:
@@ -138,7 +143,7 @@ if OTEL_CONFIGURED:
         meter_name="cron.metrics",       # Custom meter name
         record_metrics=True,             # Enable metrics recording
     )
-    
+
     # Add hooks to all jobs globally
     # These hooks will:
     # - Create spans for each job execution
@@ -147,7 +152,7 @@ if OTEL_CONFIGURED:
     crons.add_before_run_hook(otel_hooks.before_run)
     crons.add_after_run_hook(otel_hooks.after_run)
     crons.add_on_error_hook(otel_hooks.on_error)
-    
+
     logger.info("📊 OpenTelemetry hooks registered for all jobs")
 
 
@@ -159,7 +164,7 @@ if OTEL_CONFIGURED:
 async def traced_job():
     """
     Job that is automatically traced by OpenTelemetry.
-    
+
     The OTel hooks will:
     - Create a span for this job execution
     - Record job attributes (name, tags, expression)
@@ -167,10 +172,10 @@ async def traced_job():
     - Record success/failure status
     """
     logger.info("Executing traced job...")
-    
+
     # Simulate some work
     await asyncio.sleep(random.uniform(0.1, 1.0))
-    
+
     logger.info("Traced job completed!")
     return {"status": "success", "timestamp": datetime.now().isoformat()}
 
@@ -179,20 +184,20 @@ async def traced_job():
 async def flaky_job():
     """
     Job that occasionally fails to demonstrate error tracing.
-    
+
     When this job fails, the OTel hooks will:
     - Record the error in the span
     - Set span status to ERROR
     - Increment the failure counter
     """
     logger.info("Executing flaky job...")
-    
+
     await asyncio.sleep(random.uniform(0.2, 0.5))
-    
+
     # Simulate occasional failures
     if random.random() < 0.3:  # 30% failure rate
         raise ValueError("Simulated failure for tracing demo")
-    
+
     logger.info("Flaky job completed!")
     return "success"
 
@@ -207,21 +212,21 @@ async def flaky_job():
 async def slow_traced_job():
     """
     Slow job with retries to demonstrate retry tracing.
-    
+
     The traces will show:
     - Number of retry attempts
     - Duration per attempt
     - Final success/failure
     """
     logger.info("Executing slow traced job...")
-    
+
     delay = random.uniform(2.0, 5.0)
     await asyncio.sleep(delay)
-    
+
     # Simulate failure on some attempts
     if random.random() < 0.4:
         raise ConnectionError("Simulated connection error")
-    
+
     logger.info(f"Slow traced job completed in {delay:.2f}s")
     return {"duration": delay}
 
@@ -232,33 +237,33 @@ async def slow_traced_job():
 
 if OTEL_CONFIGURED:
     tracer = trace.get_tracer("custom.cron.tracer")
-    
+
     @crons.cron("*/5 * * * *", name="custom_traced_job", tags=["custom"])
     async def custom_traced_job():
         """
         Job with custom span creation for fine-grained tracing.
-        
+
         This demonstrates how to add custom spans within your job
         for more detailed observability.
         """
         # The OTel hooks already create a span for the job
         # But you can create child spans for sub-operations
-        
+
         with tracer.start_as_current_span("fetch_data") as span:
             span.set_attribute("data.source", "external_api")
             await asyncio.sleep(0.5)  # Simulate API call
             span.set_attribute("data.records", 42)
-        
+
         with tracer.start_as_current_span("process_data") as span:
             span.set_attribute("processing.mode", "batch")
             await asyncio.sleep(0.3)  # Simulate processing
             span.set_attribute("processing.records_processed", 42)
-        
+
         with tracer.start_as_current_span("save_results") as span:
             span.set_attribute("storage.type", "database")
             await asyncio.sleep(0.2)  # Simulate DB write
             span.set_attribute("storage.records_saved", 42)
-        
+
         return {"processed": 42}
 
 

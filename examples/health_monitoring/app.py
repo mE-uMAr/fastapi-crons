@@ -27,9 +27,9 @@ from fastapi import FastAPI, Response
 from fastapi_crons import (
     Crons,
     get_cron_router,
+    log_job_error,
     log_job_start,
     log_job_success,
-    log_job_error,
 )
 
 # =============================================================================
@@ -66,15 +66,15 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 class HealthTracker:
     """
     Custom health tracker for detailed monitoring.
-    
+
     Tracks job execution history for health assessment.
     """
-    
+
     def __init__(self, window_minutes: int = 60):
         self.window_minutes = window_minutes
         self.job_history: list[dict] = []
         self.start_time = time.time()
-    
+
     def record_execution(self, job_name: str, success: bool, duration: float):
         """Record a job execution."""
         self.job_history.append({
@@ -83,14 +83,14 @@ class HealthTracker:
             "duration": duration,
             "timestamp": datetime.now(timezone.utc),
         })
-        
+
         # Clean old entries
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.window_minutes)
         self.job_history = [
             e for e in self.job_history
             if e["timestamp"] > cutoff
         ]
-    
+
     def get_stats(self) -> dict:
         """Get health statistics."""
         if not self.job_history:
@@ -100,19 +100,19 @@ class HealthTracker:
                 "avg_duration": 0,
                 "failures_last_hour": 0,
             }
-        
+
         total = len(self.job_history)
         successes = sum(1 for e in self.job_history if e["success"])
         failures = total - successes
         avg_duration = sum(e["duration"] for e in self.job_history) / total
-        
+
         return {
             "total_executions": total,
             "success_rate": successes / total if total > 0 else 1.0,
             "avg_duration": round(avg_duration, 3),
             "failures_last_hour": failures,
         }
-    
+
     def get_uptime(self) -> float:
         """Get uptime in seconds."""
         return time.time() - self.start_time
@@ -165,10 +165,10 @@ async def flaky_job():
     """
     logger.info("Executing flaky job...")
     await asyncio.sleep(random.uniform(0.2, 0.8))
-    
+
     if random.random() < 0.2:  # 20% failure rate
         raise ValueError("Random failure")
-    
+
     return "success"
 
 
@@ -176,19 +176,19 @@ async def flaky_job():
 async def self_health_check():
     """
     Meta job that checks system health.
-    
+
     This job can:
     - Send health status to external monitoring
     - Clean up stale data
     - Trigger alerts if degraded
     """
     stats = health_tracker.get_stats()
-    
+
     if stats["success_rate"] < 0.8:
         logger.warning(f"⚠️ System degraded: success rate = {stats['success_rate']:.1%}")
     else:
         logger.info(f"✓ System healthy: success rate = {stats['success_rate']:.1%}")
-    
+
     return stats
 
 
@@ -224,12 +224,12 @@ def root():
 async def detailed_health():
     """
     Detailed health check with execution history.
-    
+
     Provides more information than the built-in endpoint.
     """
     jobs = crons.get_jobs()
     backend = crons.state_backend
-    
+
     job_statuses = []
     for job in jobs:
         status = await backend.get_job_status(job.name)
@@ -239,9 +239,9 @@ async def detailed_health():
             "next_run": job.next_run.isoformat(),
             "status": status.get("status") if status else "unknown",
         })
-    
+
     stats = health_tracker.get_stats()
-    
+
     # Determine health status
     if stats["success_rate"] < 0.5:
         status = "unhealthy"
@@ -249,7 +249,7 @@ async def detailed_health():
         status = "degraded"
     else:
         status = "healthy"
-    
+
     return {
         "status": status,
         "uptime_seconds": round(health_tracker.get_uptime(), 2),
@@ -263,10 +263,10 @@ async def detailed_health():
 async def kubernetes_liveness(response: Response):
     """
     Kubernetes liveness probe endpoint.
-    
+
     Returns 200 if the service is alive, 503 otherwise.
     Use this for Kubernetes livenessProbe.
-    
+
     livenessProbe:
       httpGet:
         path: /health/kubernetes
@@ -276,14 +276,14 @@ async def kubernetes_liveness(response: Response):
     """
     stats = health_tracker.get_stats()
     uptime = health_tracker.get_uptime()
-    
+
     # Consider unhealthy if success rate is very low
     is_healthy = stats["success_rate"] >= 0.3 or stats["total_executions"] < 5
-    
+
     if not is_healthy:
         response.status_code = 503
         return {"status": "unhealthy", "reason": "Low success rate"}
-    
+
     return {
         "status": "healthy",
         "uptime": round(uptime, 2),
@@ -294,10 +294,10 @@ async def kubernetes_liveness(response: Response):
 async def kubernetes_readiness(response: Response):
     """
     Kubernetes readiness probe endpoint.
-    
+
     Returns 200 if the service is ready to receive traffic.
     Use this for Kubernetes readinessProbe.
-    
+
     readinessProbe:
       httpGet:
         path: /health/readiness
@@ -313,11 +313,11 @@ async def kubernetes_readiness(response: Response):
         is_ready = True
     except Exception:
         is_ready = False
-    
+
     if not is_ready:
         response.status_code = 503
         return {"ready": False, "reason": "Backend unavailable"}
-    
+
     return {"ready": True, "jobs": len(crons.get_jobs())}
 
 
@@ -325,12 +325,12 @@ async def kubernetes_readiness(response: Response):
 async def prometheus_metrics():
     """
     Prometheus-style metrics endpoint.
-    
+
     Returns metrics in Prometheus exposition format.
-    
+
     For production, consider using prometheus-client library:
         pip install prometheus-client
-    
+
     scrape_configs:
       - job_name: 'fastapi-crons'
         static_configs:
@@ -339,7 +339,7 @@ async def prometheus_metrics():
     """
     stats = health_tracker.get_stats()
     jobs = crons.get_jobs()
-    
+
     # Build Prometheus metrics format
     lines = [
         "# HELP cron_uptime_seconds Uptime in seconds",
@@ -366,7 +366,7 @@ async def prometheus_metrics():
         "# TYPE cron_avg_duration_seconds gauge",
         f'cron_avg_duration_seconds {stats["avg_duration"]:.4f}',
     ]
-    
+
     return Response(content="\n".join(lines), media_type="text/plain")
 
 

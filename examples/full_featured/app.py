@@ -35,24 +35,21 @@ from typing import Any
 from fastapi import FastAPI
 
 from fastapi_crons import (
+    CronConfig,
     # Core
     Crons,
-    CronConfig,
-    get_cron_router,
-    # State backends
+    # Retry
     SQLiteStateBackend,
+    alert_on_failure,
+    alert_on_long_duration,
+    get_cron_router,
+    # Telemetry
+    is_otel_available,
+    log_job_error,
     # Hooks
     log_job_start,
     log_job_success,
-    log_job_error,
-    alert_on_failure,
-    alert_on_long_duration,
     metrics_collector,
-    # Retry
-    RetryConfig,
-    retry_on_failure,
-    # Telemetry
-    is_otel_available,
 )
 
 # =============================================================================
@@ -95,24 +92,24 @@ app = FastAPI(
 
 def create_crons() -> Crons:
     """Create and configure the Crons scheduler."""
-    
+
     # Create configuration
     config = CronConfig()
     config.instance_id = INSTANCE_ID
     config.enable_distributed_locking = ENABLE_DISTRIBUTED_LOCKING
     config.default_max_retries = DEFAULT_MAX_RETRIES
     config.default_job_timeout = DEFAULT_TIMEOUT
-    
+
     # Create state backend
     state_backend = SQLiteStateBackend(db_path="cron_state.db")
-    
+
     # Create Crons instance
     crons = Crons(
         app=app,
         state_backend=state_backend,
         config=config,
     )
-    
+
     return crons
 
 
@@ -131,18 +128,19 @@ otel_hooks = None
 
 if ENABLE_OTEL and is_otel_available():
     try:
-        from fastapi_crons.telemetry import OpenTelemetryHooks
         from opentelemetry import trace
+        from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-        from opentelemetry.sdk.resources import Resource
-        
+
+        from fastapi_crons.telemetry import OpenTelemetryHooks
+
         # Setup OpenTelemetry
         resource = Resource.create({"service.name": "fastapi-crons-fullexample"})
         tracer_provider = TracerProvider(resource=resource)
         tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
         trace.set_tracer_provider(tracer_provider)
-        
+
         # Create hooks
         otel_hooks = OpenTelemetryHooks(service_name="fastapi-crons-fullexample")
         logger.info("✅ OpenTelemetry enabled")
@@ -157,7 +155,7 @@ if ENABLE_OTEL and is_otel_available():
 def business_metric_hook(job_name: str, context: dict[str, Any]):
     """
     Custom hook for recording business metrics.
-    
+
     In production, you might:
     - Send to Datadog/NewRelic
     - Record in a time-series database
@@ -165,7 +163,7 @@ def business_metric_hook(job_name: str, context: dict[str, Any]):
     """
     duration = context.get("duration", 0)
     success = context.get("success", False)
-    
+
     # Record in metrics collector
     if success:
         logger.info(f"📊 Business metric: {job_name} completed in {duration:.2f}s")
@@ -176,11 +174,11 @@ def business_metric_hook(job_name: str, context: dict[str, Any]):
 async def slack_notification_hook(job_name: str, context: dict[str, Any]):
     """
     Async hook for sending Slack notifications on failure.
-    
+
     In production, replace with actual Slack webhook call.
     """
     error = context.get("error", "Unknown error")
-    
+
     # Simulate sending Slack notification
     logger.warning(
         f"🔔 [SLACK] Job '{job_name}' failed: {error}\n"
@@ -224,7 +222,7 @@ if otel_hooks:
 def heartbeat():
     """
     Simple heartbeat job running every minute.
-    
+
     Use for:
     - Keeping connections alive
     - Simple health checks
@@ -248,23 +246,23 @@ def heartbeat():
 async def data_sync_job():
     """
     Data synchronization job with retry and timeout.
-    
+
     Use for:
     - Syncing data from external APIs
     - Database replication
     - Cache warming
     """
     logger.info("🔄 Starting data sync...")
-    
+
     # Simulate API call that might fail
     if random.random() < 0.2:  # 20% failure rate
         raise ConnectionError("External API unavailable")
-    
+
     await asyncio.sleep(random.uniform(1, 5))
-    
+
     records_synced = random.randint(100, 1000)
     logger.info(f"🔄 Synced {records_synced} records")
-    
+
     return {"records_synced": records_synced}
 
 
@@ -280,20 +278,20 @@ async def data_sync_job():
 async def cleanup_job():
     """
     Hourly cleanup job with long duration alerting.
-    
+
     Use for:
     - Purging old records
     - Cleaning temporary files
     - Archiving logs
     """
     logger.info("🧹 Starting cleanup...")
-    
+
     # Simulate cleanup work
     await asyncio.sleep(random.uniform(2, 10))
-    
+
     deleted = random.randint(50, 500)
     logger.info(f"🧹 Deleted {deleted} old records")
-    
+
     return {"deleted": deleted}
 
 
@@ -317,17 +315,17 @@ if cleanup:
 async def generate_daily_report():
     """
     Daily report generation job.
-    
+
     Use for:
     - Business intelligence reports
     - Email summaries
     - Analytics aggregation
     """
     logger.info("📊 Generating daily report...")
-    
+
     # Simulate report generation
     await asyncio.sleep(random.uniform(5, 15))
-    
+
     report = {
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "metrics": {
@@ -336,7 +334,7 @@ async def generate_daily_report():
             "orders": random.randint(100, 500),
         },
     }
-    
+
     logger.info(f"📊 Daily report generated: {report}")
     return report
 
@@ -363,21 +361,21 @@ class NetworkError(Exception):
 async def external_api_job():
     """
     Job that calls external API with selective retry.
-    
+
     Only retries on network-related errors, not on validation errors.
     """
     logger.info("🌐 Calling external API...")
-    
+
     await asyncio.sleep(random.uniform(0.5, 2))
-    
+
     # Simulate different error types
     error_type = random.choice(["success", "success", "network", "database"])
-    
+
     if error_type == "network":
         raise NetworkError("Connection timed out")
     elif error_type == "database":
         raise DatabaseError("Invalid data format")  # This won't be retried
-    
+
     return {"api_response": "OK"}
 
 
@@ -395,20 +393,20 @@ async def external_api_job():
 async def send_pending_webhooks():
     """
     Process and send pending webhook notifications.
-    
+
     High retry count for reliable delivery.
     """
     logger.info("📤 Processing pending webhooks...")
-    
+
     # Simulate processing webhooks
     pending = random.randint(0, 20)
     sent = 0
-    
-    for i in range(pending):
+
+    for _i in range(pending):
         await asyncio.sleep(0.1)  # Simulate sending
         if random.random() > 0.05:  # 95% success rate
             sent += 1
-    
+
     logger.info(f"📤 Sent {sent}/{pending} webhooks")
     return {"pending": pending, "sent": sent, "failed": pending - sent}
 
