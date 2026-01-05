@@ -1,6 +1,9 @@
 # CHANGELOG
 
 
+## v0.2.0 (2026-01-04)
+
+
 ## v0.1.1 (2026-01-04)
 
 ### Bug Fixes
@@ -14,6 +17,11 @@
   strings - Update type annotations to use X | Y syntax - Fix exception chaining with 'from e' - Use
   specific exception types in tests - Fix variable redefinition in test_scheduler - Fix CI workflow
   syntax (continue-on-error was inside run block)
+
+### Features
+
+- Added health monitering and OpenTelemetry support
+  ([`8df68b9`](https://github.com/mE-uMAr/fastapi-crons/commit/8df68b9de71365c7c1ab568b759fb3549ad23bf2))
 
 
 ## v0.1.0 (2026-01-04)
