@@ -1,6 +1,7 @@
 """Pytest configuration and shared fixtures for fastapi-crons tests."""
 import asyncio
 import os
+import sys
 import tempfile
 
 import pytest
@@ -11,17 +12,22 @@ from fastapi_crons import CronConfig, Crons, SQLiteStateBackend
 from fastapi_crons.locking import DistributedLockManager, LocalLockBackend
 
 
+# Windows requires WindowsSelectorEventLoopPolicy for compatibility
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
 def reset_global_crons():
     """Reset the global crons instance to ensure test isolation."""
     scheduler_module._global_crons = None
 
 
-@pytest.fixture
-def event_loop():
-    """Create an event loop for async tests."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+@pytest.fixture(scope="session")
+def event_loop_policy():
+    """Configure event loop policy for cross-platform compatibility."""
+    if sys.platform == "win32":
+        return asyncio.WindowsSelectorEventLoopPolicy()
+    return asyncio.DefaultEventLoopPolicy()
 
 
 @pytest.fixture

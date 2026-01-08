@@ -72,7 +72,7 @@ jobs:
 
       - name: Publish Package to GitHub Release
         if: steps.release.outputs.released == 'true'
-        uses: python-semantic-release/upload-to-gh-release@main
+        uses: python-semantic-release/publish-action@v10.5.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}     
   deploy:
