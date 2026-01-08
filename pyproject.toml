@@ -81,14 +81,11 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 [tool.semantic_release]
-version_variable = [
-    "pyproject.toml:version",
+version_toml = [
+    "pyproject.toml:project.version",
 ]
-
-#version_toml = [
-#    "project.project.version",
-#]
 build_command = "python -m pip install build && python -m build"
+commit_author = "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 
 [tool.semantic_release.changelog]
 exclude_commit_patterns = [

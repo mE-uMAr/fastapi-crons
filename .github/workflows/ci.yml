@@ -47,17 +47,23 @@ jobs:
 
     - name: Run tests
       run: pytest tests/
+
   release:
-    #needs: build-and-test
+    needs: build-and-test
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     concurrency: release
     permissions:
-      contents: write 
+      contents: write
+      id-token: write
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0 
-          ref: ${{ github.ref }}
+          persist-credentials: true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -74,13 +80,19 @@ jobs:
         if: steps.release.outputs.released == 'true'
         uses: python-semantic-release/publish-action@v10.5.3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}     
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
   deploy:
     needs: release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: needs.release.outputs.released == 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Pull latest changes
+        run: git pull origin main
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -93,4 +105,4 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/* --skip-existing
+        run: twine upload dist/*
