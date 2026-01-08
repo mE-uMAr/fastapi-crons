@@ -1,8 +1,8 @@
 """Pytest configuration and shared fixtures for fastapi-crons tests."""
-import asyncio
+import gc
 import os
-import sys
 import tempfile
+import time
 
 import pytest
 from fastapi import FastAPI
@@ -11,22 +11,24 @@ import fastapi_crons.scheduler as scheduler_module
 from fastapi_crons import CronConfig, Crons, SQLiteStateBackend
 from fastapi_crons.locking import DistributedLockManager, LocalLockBackend
 
-# Windows requires WindowsSelectorEventLoopPolicy for compatibility
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 
 def reset_global_crons():
     """Reset the global crons instance to ensure test isolation."""
     scheduler_module._global_crons = None
 
 
-@pytest.fixture(scope="session")
-def event_loop_policy():
-    """Configure event loop policy for cross-platform compatibility."""
-    if sys.platform == "win32":
-        return asyncio.WindowsSelectorEventLoopPolicy()
-    return asyncio.DefaultEventLoopPolicy()
+def _safe_remove_file(path: str, retries: int = 3, delay: float = 0.1) -> None:
+    """Safely remove a file with retry logic for Windows file locking issues."""
+    for i in range(retries):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            return
+        except PermissionError:
+            if i < retries - 1:
+                gc.collect()  # Force garbage collection to release file handles
+                time.sleep(delay)
+            # Ignore on last retry - CI cleanup will handle it
 
 
 @pytest.fixture
@@ -35,15 +37,17 @@ def temp_db():
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = f.name
     yield db_path
-    # Cleanup
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    # Cleanup with retry for Windows
+    _safe_remove_file(db_path)
 
 
 @pytest.fixture
-def sqlite_backend(temp_db):
+async def sqlite_backend(temp_db):
     """Create a SQLite state backend with temporary database."""
-    return SQLiteStateBackend(db_path=temp_db)
+    backend = SQLiteStateBackend(db_path=temp_db)
+    yield backend
+    # Close the connection to release the file lock
+    await backend.close()
 
 
 @pytest.fixture
@@ -62,7 +66,7 @@ def lock_manager(cron_config):
 
 
 @pytest.fixture
-def crons_instance(sqlite_backend, lock_manager, cron_config):
+async def crons_instance(sqlite_backend, lock_manager, cron_config):
     """Create a Crons instance for testing."""
     # Reset global state to ensure test isolation
     reset_global_crons()
@@ -81,7 +85,7 @@ def fastapi_app():
 
 
 @pytest.fixture
-def crons_with_app(fastapi_app, sqlite_backend, lock_manager, cron_config):
+async def crons_with_app(fastapi_app, sqlite_backend, lock_manager, cron_config):
     """Create a Crons instance integrated with FastAPI app."""
     # Reset global state to ensure test isolation
     reset_global_crons()

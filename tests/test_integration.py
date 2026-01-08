@@ -1,5 +1,6 @@
 """Integration tests for fastapi-crons."""
 import asyncio
+import inspect
 
 import pytest
 from fastapi.testclient import TestClient
@@ -95,7 +96,7 @@ class TestIntegration:
             execution_log.append("async_executed")
 
         job = crons_instance.get_job("async_job")
-        assert asyncio.iscoroutinefunction(job.func)
+        assert inspect.iscoroutinefunction(job.func)
 
     @pytest.mark.asyncio
     async def test_sync_job_execution(self, crons_instance):
@@ -107,4 +108,4 @@ class TestIntegration:
             execution_log.append("sync_executed")
 
         job = crons_instance.get_job("sync_job")
-        assert not asyncio.iscoroutinefunction(job.func)
+        assert not inspect.iscoroutinefunction(job.func)
