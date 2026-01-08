@@ -11,7 +11,6 @@ import fastapi_crons.scheduler as scheduler_module
 from fastapi_crons import CronConfig, Crons, SQLiteStateBackend
 from fastapi_crons.locking import DistributedLockManager, LocalLockBackend
 
-
 # Windows requires WindowsSelectorEventLoopPolicy for compatibility
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
