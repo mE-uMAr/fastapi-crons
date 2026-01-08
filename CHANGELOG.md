@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v2.1.1 (2026-01-08)
+
+### Bug Fixes
+
+- Resolve Windows asyncio compatibility and update deprecated release action
+  ([`76aa6d9`](https://github.com/mE-uMAr/fastapi-crons/commit/76aa6d9))
+
+- Sort imports in conftest.py
+  ([`76aa6d9`](https://github.com/mE-uMAr/fastapi-crons/commit/76aa6d9))
+
+- Resolve Windows file locking and Python 3.14 deprecations
+  ([`2984b8e`](https://github.com/mE-uMAr/fastapi-crons/commit/2984b8e))
+
+- Correct semantic-release config for version bumping and PyPI deployment
+  ([`0a93e44`](https://github.com/mE-uMAr/fastapi-crons/commit/0a93e44))
+
+
+## v2.1.0 (2026-01-05)
+
+### Features
+
+- Major release with distributed locking, hooks system, and OpenTelemetry integration
+
+
+## v2.0.1 (2025-06-09)
+
+### Bug Fixes
+
+- Minor bug fixes and improvements
+
+
 ## v0.2.0 (2026-01-04)
 
 

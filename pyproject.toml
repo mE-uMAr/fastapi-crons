@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi-crons"
-version = "1.0.5"
+version = "2.1.1"
 description = "Cron scheduling extension for FastAPI with decorators, async support, Hooks, CLI, and SQLite job tracking."
 readme = "README.md"
 license = { file = "LICENSE" }
