@@ -1,4 +1,5 @@
 """Integration tests for fastapi-crons."""
+
 import asyncio
 import inspect
 
@@ -41,7 +42,7 @@ class TestIntegration:
             app=fastapi_app,
             state_backend=sqlite_backend,
             lock_manager=lock_manager,
-            config=cron_config
+            config=cron_config,
         )
 
         @crons.cron("*/5 * * * *", name="periodic_task")
@@ -61,17 +62,9 @@ class TestIntegration:
 
     def test_multiple_crons_instances(self, sqlite_backend, lock_manager, cron_config):
         """Test multiple Crons instances."""
-        crons1 = Crons(
-            state_backend=sqlite_backend,
-            lock_manager=lock_manager,
-            config=cron_config
-        )
+        crons1 = Crons(state_backend=sqlite_backend, lock_manager=lock_manager, config=cron_config)
 
-        crons2 = Crons(
-            state_backend=sqlite_backend,
-            lock_manager=lock_manager,
-            config=cron_config
-        )
+        crons2 = Crons(state_backend=sqlite_backend, lock_manager=lock_manager, config=cron_config)
 
         @crons1.cron("* * * * *", name="job1")
         def job1():

@@ -44,13 +44,13 @@ def get_cron_router():
                 "hooks": {
                     "before_run": len(job.before_run_hooks),
                     "after_run": len(job.after_run_hooks),
-                    "on_error": len(job.on_error_hooks)
+                    "on_error": len(job.on_error_hooks),
                 },
                 "config": {
                     "max_retries": job.max_retries,
                     "retry_delay": job.retry_delay,
                     "timeout": job.timeout,
-                }
+                },
             }
 
             if status_info:
@@ -87,11 +87,11 @@ def get_cron_router():
             for job in jobs:
                 status_info = await backend.get_job_status(job.name)
                 if status_info:
-                    if status_info['status'] == 'running':
+                    if status_info["status"] == "running":
                         running_count += 1
-                    elif status_info['status'] == 'failed':
+                    elif status_info["status"] == "failed":
                         failed_count += 1
-                    elif status_info['status'] == 'completed':
+                    elif status_info["status"] == "completed":
                         completed_count += 1
         except Exception:
             backend_connected = False
@@ -130,7 +130,7 @@ def get_cron_router():
                 "distributed_locking": config.enable_distributed_locking,
                 "default_timeout": config.default_job_timeout,
                 "default_max_retries": config.default_max_retries,
-            }
+            },
         }
 
     @router.get("/system/status")
@@ -147,11 +147,11 @@ def get_cron_router():
         for job in jobs:
             status_info = await backend.get_job_status(job.name)
             if status_info:
-                if status_info['status'] == 'running':
+                if status_info["status"] == "running":
                     running_count += 1
-                elif status_info['status'] == 'failed':
+                elif status_info["status"] == "failed":
                     failed_count += 1
-                elif status_info['status'] == 'completed':
+                elif status_info["status"] == "completed":
                     completed_count += 1
 
         return {
@@ -162,7 +162,7 @@ def get_cron_router():
             "completed_jobs": completed_count,
             "backend_type": type(backend).__name__,
             "distributed_locking": config.enable_distributed_locking,
-            "redis_configured": bool(config.redis_url or config.redis_host != "localhost")
+            "redis_configured": bool(config.redis_url or config.redis_host != "localhost"),
         }
 
     @router.get("/")
@@ -191,8 +191,8 @@ def get_cron_router():
             "hooks": {
                 "before_run": len(job.before_run_hooks),
                 "after_run": len(job.after_run_hooks),
-                "on_error": len(job.on_error_hooks)
-            }
+                "on_error": len(job.on_error_hooks),
+            },
         }
 
     @router.get("/{job_name}/status")
@@ -231,16 +231,14 @@ def get_cron_router():
         lock_key = f"job:{job_name}"
         if not force and await crons.lock_manager.is_locked(lock_key):
             raise HTTPException(
-                status_code=409,
-                detail=f"Job '{job_name}' is currently running on another instance"
+                status_code=409, detail=f"Job '{job_name}' is currently running on another instance"
             )
 
         # Try to acquire lock
         lock_id = await crons.lock_manager.acquire_lock(lock_key)
         if not lock_id and not force:
             raise HTTPException(
-                status_code=409,
-                detail=f"Failed to acquire lock for job '{job_name}'"
+                status_code=409, detail=f"Failed to acquire lock for job '{job_name}'"
             )
 
         try:
@@ -277,13 +275,15 @@ def get_cron_router():
                 await crons.state_backend.set_job_status(job_name, "completed", config.instance_id)
 
                 # Update context with execution details
-                context.update({
-                    "success": True,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat(),
-                    "duration": duration,
-                    "result": result
-                })
+                context.update(
+                    {
+                        "success": True,
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
+                        "duration": duration,
+                        "result": result,
+                    }
+                )
 
                 # Execute after_run hooks
                 for hook in job.after_run_hooks:
@@ -291,15 +291,14 @@ def get_cron_router():
 
                 # Log execution
                 await crons.state_backend.log_job_execution(
-                    job_name, config.instance_id, "completed",
-                    start_time, end_time, duration
+                    job_name, config.instance_id, "completed", start_time, end_time, duration
                 )
 
                 return {
                     "status": "success",
                     "message": f"Job '{job_name}' executed successfully",
                     "execution_time": duration,
-                    "instance_id": config.instance_id
+                    "instance_id": config.instance_id,
                 }
 
             except Exception as e:
@@ -310,13 +309,15 @@ def get_cron_router():
                 await crons.state_backend.set_job_status(job_name, "failed", config.instance_id)
 
                 # Update context with error details
-                context.update({
-                    "success": False,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat(),
-                    "duration": duration,
-                    "error": error_msg
-                })
+                context.update(
+                    {
+                        "success": False,
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
+                        "duration": duration,
+                        "error": error_msg,
+                    }
+                )
 
                 # Execute on_error hooks
                 for hook in job.on_error_hooks:
@@ -324,11 +325,18 @@ def get_cron_router():
 
                 # Log execution
                 await crons.state_backend.log_job_execution(
-                    job_name, config.instance_id, "failed",
-                    start_time, end_time, duration, error_msg
+                    job_name,
+                    config.instance_id,
+                    "failed",
+                    start_time,
+                    end_time,
+                    duration,
+                    error_msg,
                 )
 
-                raise HTTPException(status_code=500, detail=f"Job execution failed: {error_msg}") from e
+                raise HTTPException(
+                    status_code=500, detail=f"Job execution failed: {error_msg}"
+                ) from e
 
         finally:
             # Release lock

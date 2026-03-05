@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures for fastapi-crons tests."""
+
 import gc
 import os
 import tempfile
@@ -70,11 +71,7 @@ async def crons_instance(sqlite_backend, lock_manager, cron_config):
     """Create a Crons instance for testing."""
     # Reset global state to ensure test isolation
     reset_global_crons()
-    crons = Crons(
-        state_backend=sqlite_backend,
-        lock_manager=lock_manager,
-        config=cron_config
-    )
+    crons = Crons(state_backend=sqlite_backend, lock_manager=lock_manager, config=cron_config)
     return crons
 
 
@@ -90,9 +87,6 @@ async def crons_with_app(fastapi_app, sqlite_backend, lock_manager, cron_config)
     # Reset global state to ensure test isolation
     reset_global_crons()
     crons = Crons(
-        app=fastapi_app,
-        state_backend=sqlite_backend,
-        lock_manager=lock_manager,
-        config=cron_config
+        app=fastapi_app, state_backend=sqlite_backend, lock_manager=lock_manager, config=cron_config
     )
     return crons

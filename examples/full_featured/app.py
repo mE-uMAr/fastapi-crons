@@ -57,8 +57,7 @@ from fastapi_crons import (
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -152,6 +151,7 @@ if ENABLE_OTEL and is_otel_available():
 # CUSTOM HOOKS
 # =============================================================================
 
+
 def business_metric_hook(job_name: str, context: dict[str, Any]):
     """
     Custom hook for recording business metrics.
@@ -214,6 +214,7 @@ if otel_hooks:
 # =============================================================================
 # CRON JOBS - Various Patterns
 # =============================================================================
+
 
 # -----------------------------------------------------------------------------
 # 1. Simple job with minimal configuration
@@ -345,6 +346,7 @@ async def generate_daily_report():
 class DatabaseError(Exception):
     pass
 
+
 class NetworkError(Exception):
     pass
 
@@ -415,6 +417,7 @@ async def send_pending_webhooks():
 # API ENDPOINTS
 # =============================================================================
 
+
 @app.get("/")
 def root():
     """API overview with all endpoints."""
@@ -445,8 +448,7 @@ def get_metrics():
         "collector": "MetricsCollector",
         "all_metrics": metrics_collector.get_metrics(),
         "per_job": {
-            job.name: metrics_collector.get_job_metrics(job.name)
-            for job in crons.get_jobs()
+            job.name: metrics_collector.get_job_metrics(job.name) for job in crons.get_jobs()
         },
     }
 

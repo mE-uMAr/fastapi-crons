@@ -4,6 +4,7 @@ Retry decorator and utilities for job failures.
 This module provides a configurable retry mechanism for cron jobs
 with exponential backoff, jitter, and exception filtering.
 """
+
 import asyncio
 import functools
 import inspect
@@ -31,6 +32,7 @@ class RetryConfig:
         jitter: Whether to add random jitter to delay (helps prevent thundering herd)
         retry_on: Tuple of exception types to retry on (None = retry on all exceptions)
     """
+
     max_retries: int = 3
     retry_delay: float = 1.0
     backoff_multiplier: float = 2.0
@@ -42,7 +44,7 @@ class RetryConfig:
 
 def _calculate_delay(attempt: int, config: RetryConfig) -> float:
     """Calculate delay for the next retry attempt with exponential backoff."""
-    delay = config.retry_delay * (config.backoff_multiplier ** attempt)
+    delay = config.retry_delay * (config.backoff_multiplier**attempt)
     delay = min(delay, config.max_delay)
 
     if config.jitter:
@@ -112,6 +114,7 @@ def retry_on_failure(
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         if asyncio.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 last_exception: Exception | None = None
@@ -142,8 +145,7 @@ def retry_on_failure(
                             await asyncio.sleep(delay)
                         else:
                             logger.error(
-                                f"All {config.max_retries + 1} attempts failed. "
-                                f"Last error: {e}"
+                                f"All {config.max_retries + 1} attempts failed. Last error: {e}"
                             )
 
                 # This should never be reached, but just in case
@@ -153,9 +155,11 @@ def retry_on_failure(
 
             return async_wrapper  # type: ignore
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 import time
+
                 last_exception: Exception | None = None
 
                 for attempt in range(config.max_retries + 1):
@@ -184,8 +188,7 @@ def retry_on_failure(
                             time.sleep(delay)
                         else:
                             logger.error(
-                                f"All {config.max_retries + 1} attempts failed. "
-                                f"Last error: {e}"
+                                f"All {config.max_retries + 1} attempts failed. Last error: {e}"
                             )
 
                 # This should never be reached, but just in case
@@ -233,7 +236,9 @@ async def execute_with_retry(
             last_exception = e
 
             if not _should_retry(e, config):
-                logger.debug(f"[{job_name}] Exception {type(e).__name__} not in retry list, raising")
+                logger.debug(
+                    f"[{job_name}] Exception {type(e).__name__} not in retry list, raising"
+                )
                 raise
 
             if attempt < config.max_retries:
@@ -252,8 +257,7 @@ async def execute_with_retry(
                 await asyncio.sleep(delay)
             else:
                 logger.error(
-                    f"[{job_name}] All {config.max_retries + 1} attempts failed. "
-                    f"Last error: {e}"
+                    f"[{job_name}] All {config.max_retries + 1} attempts failed. Last error: {e}"
                 )
 
     if last_exception:

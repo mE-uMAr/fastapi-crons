@@ -46,6 +46,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 # CRON JOBS
 # =============================================================================
 
+
 # Simple sync job running every minute
 # The job name defaults to the function name if not specified
 @crons.cron("* * * * *")
@@ -152,6 +153,7 @@ def weekly_backup():
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @app.get("/")
 def root():

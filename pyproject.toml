@@ -20,7 +20,7 @@ dependencies = [
   "rich",
   "redis",
   "pydantic>=2.0.0",
-  "aiohttp"
+  "aiohttp",
 ]
 requires-python = ">=3.10"
 
@@ -34,11 +34,19 @@ dev = [
   "types-aiofiles",
   "types-redis",
   "build>=1.0.0",
+  "httpx>=0.28.1",
   "twine>=4.0.0",
 ]
 otel = [
   "opentelemetry-api>=1.0.0",
   "opentelemetry-sdk>=1.0.0",
+]
+sqlalchemy = [
+    "sqlalchemy[asyncio]>=2.0.47",
+]
+sqlmodel = [
+    "sqlalchemy[asyncio]>=2.0.47",
+    "sqlmodel>=0.0.37",
 ]
 
 [project.urls]
@@ -66,6 +74,11 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 
 [tool.coverage.run]
 source = ["fastapi_crons"]

@@ -14,6 +14,7 @@ from .state import RedisStateBackend, SQLiteStateBackend
 
 try:
     import redis.asyncio as redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -27,6 +28,7 @@ config = CronConfig()
 state_backend = None
 lock_manager = None
 
+
 def get_state_backend():
     """Get the appropriate state backend based on configuration."""
     global state_backend
@@ -36,19 +38,26 @@ def get_state_backend():
                 console.print("[red]Redis not available. Install with: pip install redis[/red]")
                 return
             try:
-                redis_client = redis.from_url(config.redis_url) if config.redis_url else redis.Redis(
-                    host=config.redis_host,
-                    port=config.redis_port,
-                    db=config.redis_db,
-                    password=config.redis_password
+                redis_client = (
+                    redis.from_url(config.redis_url)
+                    if config.redis_url
+                    else redis.Redis(
+                        host=config.redis_host,
+                        port=config.redis_port,
+                        db=config.redis_db,
+                        password=config.redis_password,
+                    )
                 )
                 state_backend = RedisStateBackend(redis_client)
             except Exception as e:
-                console.print(f"[yellow]Error connecting to Redis: {e}, falling back to SQLite[/yellow]")
+                console.print(
+                    f"[yellow]Error connecting to Redis: {e}, falling back to SQLite[/yellow]"
+                )
                 state_backend = SQLiteStateBackend(config.sqlite_db_path)
         else:
             state_backend = SQLiteStateBackend(config.sqlite_db_path)
     return state_backend
+
 
 def get_lock_manager():
     """Get the appropriate lock manager based on configuration."""
@@ -59,15 +68,21 @@ def get_lock_manager():
                 console.print("[red]Redis not available. Install with: pip install redis[/red]")
                 return
             try:
-                redis_client = redis.from_url(config.redis_url) if config.redis_url else redis.Redis(
-                    host=config.redis_host,
-                    port=config.redis_port,
-                    db=config.redis_db,
-                    password=config.redis_password
+                redis_client = (
+                    redis.from_url(config.redis_url)
+                    if config.redis_url
+                    else redis.Redis(
+                        host=config.redis_host,
+                        port=config.redis_port,
+                        db=config.redis_db,
+                        password=config.redis_password,
+                    )
                 )
                 lock_backend = RedisLockBackend(redis_client)
             except Exception as e:
-                console.print(f"[yellow]Error connecting to Redis: {e}, using local locking: {e}[/yellow]")
+                console.print(
+                    f"[yellow]Error connecting to Redis: {e}, using local locking: {e}[/yellow]"
+                )
                 lock_backend = LocalLockBackend()
         else:
             lock_backend = LocalLockBackend()
@@ -75,10 +90,11 @@ def get_lock_manager():
         lock_manager = DistributedLockManager(lock_backend, config)
     return lock_manager
 
+
 @cli.command()
 def config_set(
     key: str = typer.Argument(..., help="Configuration key"),
-    value: str = typer.Argument(..., help="Configuration value")
+    value: str = typer.Argument(..., help="Configuration value"),
 ):
     """Set configuration values."""
     global config
@@ -87,7 +103,7 @@ def config_set(
         # Convert value to appropriate type
         current_value = getattr(config, key)
         if isinstance(current_value, bool):
-            value = value.lower() in ('true', '1', 'yes', 'on')
+            value = value.lower() in ("true", "1", "yes", "on")
         elif isinstance(current_value, int):
             value = int(value)
 
@@ -96,6 +112,7 @@ def config_set(
     else:
         console.print(f"[red]Unknown configuration key: {key}[/red]")
         console.print("Available keys:", list(config.__dict__.keys()))
+
 
 @cli.command()
 def config_show():
@@ -109,16 +126,16 @@ def config_show():
 
     console.print(table)
 
+
 @cli.command()
 def list_jobs():
     """List all registered jobs and their status."""
+
     async def run():
         backend = get_state_backend()
 
         with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
         ) as progress:
             task = progress.add_task("Loading jobs...", total=None)
 
@@ -154,6 +171,7 @@ def list_jobs():
 
     asyncio.run(run())
 
+
 async def execute_hook(hook, job_name: str, context: dict):
     """Execute a hook function, handling both sync and async hooks."""
     try:
@@ -164,12 +182,14 @@ async def execute_hook(hook, job_name: str, context: dict):
     except Exception as e:
         console.print(f"[red][Hook Error][{job_name}] {e}[/red]")
 
+
 @cli.command()
 def run_job(
     name: str = typer.Argument(..., help="Job name to run"),
-    force: bool = typer.Option(False, "--force", "-f", help="Force run even if locked")
+    force: bool = typer.Option(False, "--force", "-f", help="Force run even if locked"),
 ):
     """Manually run a specific job."""
+
     async def run():
         from .scheduler import Crons
 
@@ -194,14 +214,14 @@ def run_job(
 
         # Check if job is locked
         if not force and await lock_mgr.is_locked(f"job:{name}"):
-            console.print(f"[yellow]Job '{name}' is currently locked (running on another instance)[/yellow]")
+            console.print(
+                f"[yellow]Job '{name}' is currently locked (running on another instance)[/yellow]"
+            )
             console.print("Use --force to override (not recommended)")
             return
 
         with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
+            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
         ) as progress:
             task = progress.add_task(f"Running job '{name}'...", total=None)
 
@@ -246,13 +266,15 @@ def run_job(
                     await backend.set_job_status(name, "completed", config.instance_id)
 
                     # Update context with execution details
-                    context.update({
-                        "success": True,
-                        "start_time": start_time.isoformat(),
-                        "end_time": end_time.isoformat(),
-                        "duration": duration,
-                        "result": result
-                    })
+                    context.update(
+                        {
+                            "success": True,
+                            "start_time": start_time.isoformat(),
+                            "end_time": end_time.isoformat(),
+                            "duration": duration,
+                            "result": result,
+                        }
+                    )
 
                     # Execute after_run hooks
                     for hook in target_job.after_run_hooks:
@@ -260,12 +282,13 @@ def run_job(
 
                     # Log execution
                     await backend.log_job_execution(
-                        name, config.instance_id, "completed",
-                        start_time, end_time, duration
+                        name, config.instance_id, "completed", start_time, end_time, duration
                     )
 
                     progress.remove_task(task)
-                    console.print(f"[green]✓ Job '{name}' completed successfully in {duration:.2f}s[/green]")
+                    console.print(
+                        f"[green]✓ Job '{name}' completed successfully in {duration:.2f}s[/green]"
+                    )
 
                 except Exception as e:
                     end_time = datetime.now(timezone.utc)
@@ -275,13 +298,15 @@ def run_job(
                     await backend.set_job_status(name, "failed", config.instance_id)
 
                     # Update context with error details
-                    context.update({
-                        "success": False,
-                        "start_time": start_time.isoformat(),
-                        "end_time": end_time.isoformat(),
-                        "duration": duration,
-                        "error": error_msg
-                    })
+                    context.update(
+                        {
+                            "success": False,
+                            "start_time": start_time.isoformat(),
+                            "end_time": end_time.isoformat(),
+                            "duration": duration,
+                            "error": error_msg,
+                        }
+                    )
 
                     # Execute on_error hooks
                     for hook in target_job.on_error_hooks:
@@ -289,12 +314,19 @@ def run_job(
 
                     # Log execution
                     await backend.log_job_execution(
-                        name, config.instance_id, "failed",
-                        start_time, end_time, duration, error_msg
+                        name,
+                        config.instance_id,
+                        "failed",
+                        start_time,
+                        end_time,
+                        duration,
+                        error_msg,
                     )
 
                     progress.remove_task(task)
-                    console.print(f"[red]✗ Job '{name}' failed after {duration:.2f}s: {error_msg}[/red]")
+                    console.print(
+                        f"[red]✗ Job '{name}' failed after {duration:.2f}s: {error_msg}[/red]"
+                    )
 
             finally:
                 # Release lock
@@ -303,9 +335,11 @@ def run_job(
 
     asyncio.run(run())
 
+
 @cli.command()
 def status():
     """Show overall system status."""
+
     async def run():
         backend = get_state_backend()
         _ = get_lock_manager()  # Initialize lock manager for status display
@@ -314,8 +348,8 @@ def status():
         system_info = f"""
 [bold]Instance ID:[/bold] {config.instance_id}
 [bold]Backend:[/bold] {type(backend).__name__}
-[bold]Locking:[/bold] {'Distributed' if config.enable_distributed_locking else 'Local'}
-[bold]Redis URL:[/bold] {config.redis_url or 'Not configured'}
+[bold]Locking:[/bold] {"Distributed" if config.enable_distributed_locking else "Local"}
+[bold]Redis URL:[/bold] {config.redis_url or "Not configured"}
         """
 
         console.print(Panel(system_info.strip(), title="System Status", border_style="blue"))
@@ -329,9 +363,9 @@ def status():
             for job_name, _ in jobs:
                 status_info = await backend.get_job_status(job_name)
                 if status_info:
-                    if status_info['status'] == 'running':
+                    if status_info["status"] == "running":
                         running_jobs += 1
-                    elif status_info['status'] == 'failed':
+                    elif status_info["status"] == "failed":
                         failed_jobs += 1
 
             stats = f"""
@@ -347,10 +381,11 @@ def status():
 
     asyncio.run(run())
 
+
 @cli.command()
 def start_scheduler(
     daemon: bool = typer.Option(False, "--daemon", "-d", help="Run as daemon"),
-    log_level: str = typer.Option("INFO", "--log-level", help="Log level")
+    log_level: str = typer.Option("INFO", "--log-level", help="Log level"),
 ):
     """Start the cron scheduler."""
     import logging
@@ -358,7 +393,7 @@ def start_scheduler(
     # Configure logging
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     async def run():
@@ -372,7 +407,9 @@ def start_scheduler(
         crons = Crons(state_backend=backend, lock_manager=lock_mgr, config=config)
 
         if not crons.get_jobs():
-            console.print("[yellow]No jobs registered. Make sure to import your job modules.[/yellow]")
+            console.print(
+                "[yellow]No jobs registered. Make sure to import your job modules.[/yellow]"
+            )
         else:
             console.print(f"[blue]Loaded {len(crons.get_jobs())} jobs[/blue]")
 
@@ -401,13 +438,15 @@ def start_scheduler(
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted[/yellow]")
 
+
 @cli.command()
 def logs(
     job_name: str | None = typer.Option(None, "--job", "-j", help="Filter by job name"),
     limit: int = typer.Option(50, "--limit", "-l", help="Number of log entries to show"),
-    follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output")
+    follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output"),
 ):
     """Show job execution logs."""
+
     async def run():
         _ = get_state_backend()  # Ensure backend is available
 
@@ -416,6 +455,7 @@ def logs(
         console.print("[yellow]Log viewing feature coming soon[/yellow]")
 
     asyncio.run(run())
+
 
 if __name__ == "__main__":
     cli()

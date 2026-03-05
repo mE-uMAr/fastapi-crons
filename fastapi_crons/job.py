@@ -5,9 +5,10 @@ from croniter import croniter
 
 # Type for hook functions - can be sync or async
 HookFunc = (
-    Callable[[str, dict], None] |  # Sync hook
-    Callable[[str, dict], Awaitable[None]]  # Async hook
+    Callable[[str, dict], None]  # Sync hook
+    | Callable[[str, dict], Awaitable[None]]  # Async hook
 )
+
 
 class CronJob:
     def __init__(
@@ -60,6 +61,7 @@ class CronJob:
         self.on_error_hooks.append(hook)
         return self  # For method chaining
 
+
 def cron_job(
     expr: str,
     *,
@@ -90,4 +92,3 @@ def cron_job(
         return func
 
     return wrapper
-

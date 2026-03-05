@@ -61,16 +61,19 @@ if is_otel_available():
             OTLPMetricExporter,  # noqa: F401
         )
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
         OTLP_AVAILABLE = True
     except ImportError:
         OTLP_AVAILABLE = False
 
     # Create resource with service name
-    resource = Resource.create({
-        "service.name": "fastapi-crons-example",
-        "service.version": "1.0.0",
-        "deployment.environment": "development",
-    })
+    resource = Resource.create(
+        {
+            "service.name": "fastapi-crons-example",
+            "service.version": "1.0.0",
+            "deployment.environment": "development",
+        }
+    )
 
     # Setup tracing
     tracer_provider = TracerProvider(resource=resource)
@@ -102,9 +105,7 @@ if is_otel_available():
     logging.info("✅ OpenTelemetry configured successfully")
 else:
     OTEL_CONFIGURED = False
-    logging.warning(
-        "⚠️ OpenTelemetry not available. Install with: pip install fastapi-crons[otel]"
-    )
+    logging.warning("⚠️ OpenTelemetry not available. Install with: pip install fastapi-crons[otel]")
 
 
 # =============================================================================
@@ -112,8 +113,7 @@ else:
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -139,9 +139,9 @@ if OTEL_CONFIGURED:
     # Create OpenTelemetry hooks
     otel_hooks = OpenTelemetryHooks(
         service_name="fastapi-crons-example",
-        tracer_name="cron.jobs",        # Custom tracer name
-        meter_name="cron.metrics",       # Custom meter name
-        record_metrics=True,             # Enable metrics recording
+        tracer_name="cron.jobs",  # Custom tracer name
+        meter_name="cron.metrics",  # Custom meter name
+        record_metrics=True,  # Enable metrics recording
     )
 
     # Add hooks to all jobs globally
@@ -159,6 +159,7 @@ if OTEL_CONFIGURED:
 # =============================================================================
 # CRON JOBS
 # =============================================================================
+
 
 @crons.cron("*/1 * * * *", name="traced_job", tags=["traced", "demo"])
 async def traced_job():
@@ -203,11 +204,7 @@ async def flaky_job():
 
 
 @crons.cron(
-    "*/3 * * * *",
-    name="slow_traced_job",
-    max_retries=2,
-    timeout=10.0,
-    tags=["traced", "slow"]
+    "*/3 * * * *", name="slow_traced_job", max_retries=2, timeout=10.0, tags=["traced", "slow"]
 )
 async def slow_traced_job():
     """
@@ -270,6 +267,7 @@ if OTEL_CONFIGURED:
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @app.get("/")
 def root():

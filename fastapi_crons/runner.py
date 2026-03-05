@@ -60,14 +60,16 @@ def calculate_retry_delay(
     """Calculate delay for the next retry attempt with exponential backoff and jitter."""
     import random
 
-    delay = base_delay * (backoff_multiplier ** attempt)
+    delay = base_delay * (backoff_multiplier**attempt)
     delay = min(delay, max_delay)
     # Add up to 25% jitter to prevent thundering herd
     jitter_amount = delay * 0.25 * random.random()
     return delay + jitter_amount
 
 
-async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: DistributedLockManager, config: CronConfig) -> None:
+async def run_job_loop(
+    job: CronJob, state: StateBackend, lock_manager: DistributedLockManager, config: CronConfig
+) -> None:
     """Main job execution loop with distributed locking, retry, and timeout support."""
     logger.info(f"Starting job loop for '{job.name}' - next run at {job.next_run}")
 
@@ -136,14 +138,16 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
                         await state.set_job_status(job.name, "completed", config.instance_id)
 
                         # Update context with execution details
-                        context.update({
-                            "success": True,
-                            "start_time": start_time.isoformat(),
-                            "end_time": end_time.isoformat(),
-                            "duration": duration,
-                            "result": result,
-                            "attempts": attempt + 1,
-                        })
+                        context.update(
+                            {
+                                "success": True,
+                                "start_time": start_time.isoformat(),
+                                "end_time": end_time.isoformat(),
+                                "duration": duration,
+                                "result": result,
+                                "attempts": attempt + 1,
+                            }
+                        )
 
                         # Execute after_run hooks
                         for hook in job.after_run_hooks:
@@ -151,8 +155,12 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
 
                         # Log execution
                         await state.log_job_execution(
-                            job.name, config.instance_id, "completed",
-                            start_time, end_time, duration
+                            job.name,
+                            config.instance_id,
+                            "completed",
+                            start_time,
+                            end_time,
+                            duration,
                         )
 
                         logger.info(f"Job '{job.name}' completed successfully in {duration:.2f}s")
@@ -186,7 +194,9 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
                             break
 
                 # Handle final failure (after all retries)
-                if last_error is not None and (attempt >= max_retries or isinstance(last_error, JobTimeoutError)):
+                if last_error is not None and (
+                    attempt >= max_retries or isinstance(last_error, JobTimeoutError)
+                ):
                     end_time = datetime.now(timezone.utc)
                     duration = (end_time - start_time).total_seconds()
                     error = str(last_error)
@@ -196,15 +206,17 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
                     await state.set_job_status(job.name, "failed", config.instance_id)
 
                     # Update context with error details
-                    context.update({
-                        "success": False,
-                        "start_time": start_time.isoformat(),
-                        "end_time": end_time.isoformat(),
-                        "duration": duration,
-                        "error": error,
-                        "attempts": attempt + 1,
-                        "is_timeout": isinstance(last_error, JobTimeoutError),
-                    })
+                    context.update(
+                        {
+                            "success": False,
+                            "start_time": start_time.isoformat(),
+                            "end_time": end_time.isoformat(),
+                            "duration": duration,
+                            "error": error,
+                            "attempts": attempt + 1,
+                            "is_timeout": isinstance(last_error, JobTimeoutError),
+                        }
+                    )
 
                     # Execute on_error hooks
                     for hook in job.on_error_hooks:
@@ -212,8 +224,13 @@ async def run_job_loop(job: CronJob, state: StateBackend, lock_manager: Distribu
 
                     # Log execution
                     await state.log_job_execution(
-                        job.name, config.instance_id, "failed",
-                        start_time, end_time, duration, error
+                        job.name,
+                        config.instance_id,
+                        "failed",
+                        start_time,
+                        end_time,
+                        duration,
+                        error,
                     )
 
             finally:

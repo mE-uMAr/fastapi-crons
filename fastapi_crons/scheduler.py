@@ -14,6 +14,7 @@ try:
     import redis.asyncio as redis
 
     from .locking import RedisLockBackend
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -24,10 +25,15 @@ logger = logging.getLogger(__name__)
 # Global instance to share jobs across decorators and scheduler
 _global_crons: Optional["Crons"] = None
 
+
 class Crons:
-    def __init__(self, app: Any | None = None, state_backend: StateBackend | None = None,
-                 lock_manager: DistributedLockManager | None = None,
-                 config: CronConfig | None = None) -> None:
+    def __init__(
+        self,
+        app: Any | None = None,
+        state_backend: StateBackend | None = None,
+        lock_manager: DistributedLockManager | None = None,
+        config: CronConfig | None = None,
+    ) -> None:
         global _global_crons
 
         self.jobs: list[CronJob] = []
@@ -43,11 +49,15 @@ class Crons:
         if self.lock_manager is None:
             if self.config.enable_distributed_locking and REDIS_AVAILABLE:
                 try:
-                    redis_client = redis.from_url(self.config.redis_url) if self.config.redis_url else redis.Redis(
-                        host=self.config.redis_host,
-                        port=self.config.redis_port,
-                        db=self.config.redis_db,
-                        password=self.config.redis_password
+                    redis_client = (
+                        redis.from_url(self.config.redis_url)
+                        if self.config.redis_url
+                        else redis.Redis(
+                            host=self.config.redis_host,
+                            port=self.config.redis_port,
+                            db=self.config.redis_db,
+                            password=self.config.redis_password,
+                        )
                     )
                     lock_backend = RedisLockBackend(redis_client)
                     self.lock_manager = DistributedLockManager(lock_backend, self.config)
@@ -73,7 +83,7 @@ class Crons:
         """Initialize with FastAPI app - automatically start/stop with app lifecycle."""
 
         # Check if app already has a lifespan
-        existing_lifespan = getattr(app.router, 'lifespan_context', None)
+        existing_lifespan = getattr(app.router, "lifespan_context", None)
 
         @asynccontextmanager
         async def lifespan_with_crons(app: Any):  # type: ignore
@@ -170,6 +180,7 @@ class Crons:
             retry_on: Tuple of exception types to retry on (None = retry on all exceptions)
             timeout: Job timeout in seconds (None = use config default, 0 = no timeout)
         """
+
         def wrapper(func: Callable) -> Callable:
             job = CronJob(
                 func,
@@ -193,6 +204,7 @@ class Crons:
                 self._tasks.append(task)
 
             return func
+
         return wrapper
 
     def get_jobs(self) -> list[CronJob]:
@@ -237,6 +249,7 @@ class Crons:
             for job in self.jobs:
                 job.add_on_error_hook(hook)
         return self
+
 
 # Convenience function to get the global crons instance
 def get_crons() -> Crons:
