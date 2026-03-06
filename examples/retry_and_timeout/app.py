@@ -36,8 +36,7 @@ from fastapi_crons import (
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -59,6 +58,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 # CUSTOM EXCEPTIONS for retry filtering
 # =============================================================================
 
+
 class TransientError(Exception):
     """A transient error that can be retried."""
 
@@ -79,6 +79,7 @@ class DatabaseError(Exception):
 # RETRY CALLBACK for monitoring
 # =============================================================================
 
+
 def on_retry_callback(attempt: int, exception: Exception, delay: float):
     """
     Callback function called on each retry attempt.
@@ -98,13 +99,14 @@ def on_retry_callback(attempt: int, exception: Exception, delay: float):
 # CRON JOBS WITH RETRY
 # =============================================================================
 
+
 # Job with retry using cron decorator parameters
 @crons.cron(
     "*/2 * * * *",
     name="job_with_retry",
-    max_retries=3,           # Retry up to 3 times
-    retry_delay=2.0,         # Initial delay of 2 seconds
-    tags=["retry"]
+    max_retries=3,  # Retry up to 3 times
+    retry_delay=2.0,  # Initial delay of 2 seconds
+    tags=["retry"],
 )
 async def job_with_retry():
     """
@@ -129,7 +131,7 @@ async def job_with_retry():
     max_retries=3,
     retry_delay=1.0,
     retry_on=(NetworkError, TransientError),  # Only retry these
-    tags=["retry", "filtered"]
+    tags=["retry", "filtered"],
 )
 async def job_with_filtered_retry():
     """
@@ -157,12 +159,13 @@ async def job_with_filtered_retry():
 # CRON JOBS WITH TIMEOUT
 # =============================================================================
 
+
 # Job with timeout configuration
 @crons.cron(
     "*/2 * * * *",
     name="job_with_timeout",
     timeout=5.0,  # 5 second timeout
-    tags=["timeout"]
+    tags=["timeout"],
 )
 async def job_with_timeout():
     """
@@ -190,7 +193,7 @@ async def job_with_timeout():
     max_retries=2,
     retry_delay=1.0,
     timeout=3.0,  # 3 second timeout
-    tags=["retry", "timeout"]
+    tags=["retry", "timeout"],
 )
 async def job_with_retry_and_timeout():
     """
@@ -223,13 +226,14 @@ async def job_with_retry_and_timeout():
 # USING @retry_on_failure DECORATOR STANDALONE
 # =============================================================================
 
+
 # The retry_on_failure decorator can be used standalone for any function
 @retry_on_failure(
     max_retries=3,
     retry_delay=0.5,
     backoff_multiplier=2.0,  # Double delay each retry
-    max_delay=10.0,          # Cap delay at 10 seconds
-    jitter=True,             # Add random jitter to prevent thundering herd
+    max_delay=10.0,  # Cap delay at 10 seconds
+    jitter=True,  # Add random jitter to prevent thundering herd
     on_retry=on_retry_callback,
 )
 async def fetch_data_with_retry(url: str) -> dict:
@@ -266,6 +270,7 @@ async def fetch_job():
 # USING execute_with_retry() DYNAMICALLY
 # =============================================================================
 
+
 @crons.cron("*/3 * * * *", name="dynamic_retry_job", tags=["dynamic"])
 async def dynamic_retry_job():
     """
@@ -292,9 +297,7 @@ async def dynamic_retry_job():
 
     try:
         result = await execute_with_retry(
-            unstable_operation,
-            retry_config,
-            job_name="dynamic_operation"
+            unstable_operation, retry_config, job_name="dynamic_operation"
         )
         logger.info(f"Dynamic retry job succeeded: {result}")
         return result
@@ -306,6 +309,7 @@ async def dynamic_retry_job():
 # =============================================================================
 # ERROR HANDLING HOOK for timeout
 # =============================================================================
+
 
 def handle_timeout_error(job_name: str, context: dict):
     """Hook to handle timeout errors specifically."""
@@ -325,6 +329,7 @@ if timeout_job:
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @app.get("/")
 def root():

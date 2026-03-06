@@ -126,6 +126,63 @@ You'll get a full list of jobs with:
 
 We use SQLite (via `aiosqlite`) to keep a persistent record of when each job last ran. This allows observability and resilience during restarts.
 
+## 🗄️ SQLAlchemy State Backend
+
+For projects already using SQLAlchemy or SQLModel with PostgreSQL or MySQL,
+you can reuse your existing database connection instead of SQLite.
+```bash
+pip install fastapi-crons[sqlalchemy]
+# or
+pip install fastapi-crons[sqlmodel]
+```
+```python
+from sqlalchemy.ext.asyncio import create_async_engine
+from fastapi_crons import Crons
+from fastapi_crons.state.sqlalchemy import SQLAlchemyStateBackend
+
+engine  = create_async_engine("postgresql+asyncpg://user:pass@host/db")
+backend = SQLAlchemyStateBackend(engine)
+crons   = Crons(app, state_backend=backend)
+```
+
+Works with sync engines too:
+```python
+from sqlalchemy import create_engine
+engine  = create_engine("postgresql://user:pass@host/db")
+backend = SQLAlchemyStateBackend(engine)
+```
+
+### Alembic Integration
+```python
+# env.py
+from fastapi_crons.state.sqlalchemy import cron_metadata
+target_metadata = [Base.metadata, cron_metadata]
+```
+
+---
+
+## 🔒 SQLAlchemy Lock Backend
+```bash
+pip install fastapi-crons[sqlalchemy]
+```
+```python
+from fastapi_crons.locking.sqlalchemy import SQLAlchemyLockBackend
+from fastapi_crons.locking import DistributedLockManager
+from fastapi_crons import CronConfig
+
+engine  = create_async_engine("postgresql+asyncpg://...")
+backend = SQLAlchemyLockBackend(engine)
+manager = DistributedLockManager(backend, CronConfig())
+crons   = Crons(app, lock_manager=manager)
+```
+
+For PostgreSQL, advisory locks are available as a lighter alternative (no table required):
+```python
+from fastapi_crons.locking.sqlalchemy import PostgreSQLAdvisoryLockBackend
+
+backend = PostgreSQLAdvisoryLockBackend(engine)
+```
+
 ### Table:
 
 ```sql

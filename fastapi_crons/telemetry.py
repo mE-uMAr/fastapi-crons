@@ -7,6 +7,7 @@ for cron job monitoring and observability.
 Note: This module requires the opentelemetry-api and opentelemetry-sdk packages.
 Install with: pip install fastapi-crons[otel]
 """
+
 import logging
 from typing import Any
 
@@ -16,6 +17,7 @@ logger = logging.getLogger("fastapi_cron.telemetry")
 try:
     from opentelemetry import metrics, trace
     from opentelemetry.trace import SpanKind, Status, StatusCode
+
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
@@ -251,7 +253,9 @@ class OpenTelemetryHooks:
                     1,
                     attributes={
                         "job_name": job_name,
-                        "error_type": type(error).__name__ if isinstance(error, Exception) else "str",
+                        "error_type": type(error).__name__
+                        if isinstance(error, Exception)
+                        else "str",
                         "tags": ",".join(tags) if tags else "",
                     },
                 )
@@ -281,7 +285,7 @@ def is_otel_available() -> bool:
 
 def get_recommended_otel_setup() -> str:
     """Return recommended OpenTelemetry setup code."""
-    return '''
+    return """
 # Recommended OpenTelemetry setup for fastapi-crons
 
 from opentelemetry import trace, metrics
@@ -308,4 +312,4 @@ otel_hooks = OpenTelemetryHooks(service_name="my-cron-service")
 crons.add_before_run_hook(otel_hooks.before_run)
 crons.add_after_run_hook(otel_hooks.after_run)
 crons.add_on_error_hook(otel_hooks.on_error)
-'''
+"""

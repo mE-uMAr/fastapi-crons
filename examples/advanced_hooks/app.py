@@ -38,8 +38,7 @@ from fastapi_crons import (
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -60,6 +59,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 # =============================================================================
 # CUSTOM HOOKS
 # =============================================================================
+
 
 def custom_before_hook(job_name: str, context: dict[str, Any]):
     """
@@ -143,15 +143,13 @@ def performance_tracking_hook(job_name: str, context: dict[str, Any]):
     threshold = 5.0  # 5 seconds
 
     if duration > threshold:
-        logger.warning(
-            f"⚠️ SLOW JOB: '{job_name}' took {duration:.2f}s "
-            f"(threshold: {threshold}s)"
-        )
+        logger.warning(f"⚠️ SLOW JOB: '{job_name}' took {duration:.2f}s (threshold: {threshold}s)")
 
 
 # =============================================================================
 # CRON JOBS WITH HOOKS
 # =============================================================================
+
 
 # Job with individual hooks attached via method chaining
 @crons.cron("*/2 * * * *", name="job_with_hooks")
@@ -266,6 +264,7 @@ if slow_job:
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @app.get("/")
 def root():

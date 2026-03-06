@@ -1,6 +1,7 @@
 """
 Pre-built hooks for common use cases like logging, metrics, alerts, and webhooks.
 """
+
 import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -11,21 +12,25 @@ import aiohttp
 # Configure logger
 logger = logging.getLogger("fastapi_cron")
 
+
 # Logging hooks
 def log_job_start(job_name: str, context: dict[str, Any]):
     """Log when a job starts."""
     logger.info(f"Job '{job_name}' started at {datetime.now(timezone.utc).isoformat()}")
+
 
 def log_job_success(job_name: str, context: dict[str, Any]):
     """Log when a job completes successfully."""
     duration = context.get("duration", 0)
     logger.info(f"Job '{job_name}' completed successfully in {duration:.2f}s")
 
+
 def log_job_error(job_name: str, context: dict[str, Any]):
     """Log when a job fails."""
     error = context.get("error", "Unknown error")
     duration = context.get("duration", 0)
     logger.error(f"Job '{job_name}' failed after {duration:.2f}s: {error}")
+
 
 # Webhook hooks
 async def webhook_notification(url: str, include_context: bool = True):
@@ -40,12 +45,16 @@ async def webhook_notification(url: str, include_context: bool = True):
         A hook function that can be registered with add_before_run_hook,
         add_after_run_hook, or add_on_error_hook
     """
+
     async def hook(job_name: str, context: dict[str, Any]):
         payload = {
             "job_name": job_name,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "event_type": "before_run" if "success" not in context else
-                          "after_run" if context.get("success") else "on_error"
+            "event_type": "before_run"
+            if "success" not in context
+            else "after_run"
+            if context.get("success")
+            else "on_error",
         }
 
         if include_context:
@@ -61,6 +70,7 @@ async def webhook_notification(url: str, include_context: bool = True):
 
     return hook
 
+
 # Metrics hooks
 class MetricsCollector:
     """Simple in-memory metrics collector for cron jobs."""
@@ -70,7 +80,7 @@ class MetricsCollector:
             "job_runs": {},
             "job_durations": {},
             "job_successes": {},
-            "job_failures": {}
+            "job_failures": {},
         }
 
     def record_job_start(self, job_name: str, context: dict[str, Any]):
@@ -108,18 +118,22 @@ class MetricsCollector:
             "successes": self.metrics["job_successes"].get(job_name, 0),
             "failures": self.metrics["job_failures"].get(job_name, 0),
             "durations": self.metrics["job_durations"].get(job_name, []),
-            "avg_duration": sum(self.metrics["job_durations"].get(job_name, [0])) /
-                           max(len(self.metrics["job_durations"].get(job_name, [1])), 1)
+            "avg_duration": sum(self.metrics["job_durations"].get(job_name, [0]))
+            / max(len(self.metrics["job_durations"].get(job_name, [1])), 1),
         }
+
 
 # Create a global metrics collector instance
 metrics_collector = MetricsCollector()
+
 
 # Alert hooks
 class AlertManager:
     """Manager for job alerts."""
 
-    def __init__(self, alert_handlers: list[Callable[[str, str, dict[str, Any]], None]] | None = None):
+    def __init__(
+        self, alert_handlers: list[Callable[[str, str, dict[str, Any]], None]] | None = None
+    ):
         self.alert_handlers = alert_handlers or []
 
     def add_handler(self, handler: Callable[[str, str, dict[str, Any]], None]):
@@ -134,20 +148,25 @@ class AlertManager:
             except Exception as e:
                 logger.error(f"Alert handler failed: {e}")
 
+
 # Create a global alert manager instance
 alert_manager = AlertManager()
+
 
 # Example alert handler for logging
 def log_alert_handler(job_name: str, alert_type: str, context: dict[str, Any]):
     """Log an alert."""
     logger.warning(f"ALERT: {alert_type} for job '{job_name}': {context.get('error', '')}")
 
+
 # Add the log alert handler to the alert manager
 alert_manager.add_handler(log_alert_handler)
+
 
 def alert_on_failure(job_name: str, context: dict[str, Any]):
     """Trigger an alert when a job fails."""
     alert_manager.trigger_alert(job_name, "failure", context)
+
 
 def alert_on_long_duration(threshold_seconds: float):
     """
@@ -159,12 +178,13 @@ def alert_on_long_duration(threshold_seconds: float):
     Returns:
         A hook function that can be registered with add_after_run_hook
     """
+
     def hook(job_name: str, context: dict[str, Any]):
         duration = context.get("duration", 0)
         if duration > threshold_seconds:
             alert_context = {
                 **context,
-                "alert_reason": f"Job took {duration:.2f}s, which exceeds threshold of {threshold_seconds:.2f}s"
+                "alert_reason": f"Job took {duration:.2f}s, which exceeds threshold of {threshold_seconds:.2f}s",
             }
             alert_manager.trigger_alert(job_name, "long_duration", alert_context)
 

@@ -1,4 +1,5 @@
 """Tests for CronJob class and job creation."""
+
 from datetime import datetime, timezone
 
 import pytest
@@ -12,6 +13,7 @@ class TestCronJob:
 
     def test_job_creation(self):
         """Test basic job creation."""
+
         def sample_job():
             pass
 
@@ -25,6 +27,7 @@ class TestCronJob:
 
     def test_job_with_tags(self):
         """Test job creation with tags."""
+
         def sample_job():
             pass
 
@@ -34,6 +37,7 @@ class TestCronJob:
 
     def test_job_name_defaults_to_function_name(self):
         """Test that job name defaults to function name."""
+
         def my_function():
             pass
 
@@ -42,6 +46,7 @@ class TestCronJob:
 
     def test_job_next_run_calculation(self):
         """Test that next_run is calculated correctly."""
+
         def sample_job():
             pass
 
@@ -54,6 +59,7 @@ class TestCronJob:
 
     def test_job_update_next_run(self):
         """Test updating next_run timestamp."""
+
         def sample_job():
             pass
 
@@ -69,6 +75,7 @@ class TestCronJob:
 
     def test_job_hooks_initialization(self):
         """Test that job hooks are initialized as empty lists."""
+
         def sample_job():
             pass
 
@@ -80,6 +87,7 @@ class TestCronJob:
 
     def test_add_before_run_hook(self):
         """Test adding a before_run hook."""
+
         def sample_job():
             pass
 
@@ -94,6 +102,7 @@ class TestCronJob:
 
     def test_add_after_run_hook(self):
         """Test adding an after_run hook."""
+
         def sample_job():
             pass
 
@@ -108,6 +117,7 @@ class TestCronJob:
 
     def test_add_on_error_hook(self):
         """Test adding an on_error hook."""
+
         def sample_job():
             pass
 
@@ -122,6 +132,7 @@ class TestCronJob:
 
     def test_multiple_hooks(self):
         """Test adding multiple hooks of the same type."""
+
         def sample_job():
             pass
 
@@ -141,6 +152,7 @@ class TestCronJob:
 
     def test_cron_expression_validation(self):
         """Test that invalid cron expressions raise errors."""
+
         def sample_job():
             pass
 
@@ -149,17 +161,18 @@ class TestCronJob:
 
     def test_valid_cron_expressions(self):
         """Test various valid cron expressions."""
+
         def sample_job():
             pass
 
         valid_expressions = [
-            "* * * * *",           # Every minute
-            "*/5 * * * *",         # Every 5 minutes
-            "0 * * * *",           # Every hour
-            "0 0 * * *",           # Daily at midnight
-            "0 0 * * 0",           # Weekly on Sunday
-            "0 0 1 * *",           # Monthly on 1st
-            "0 0 1 1 *",           # Yearly on Jan 1st
+            "* * * * *",  # Every minute
+            "*/5 * * * *",  # Every 5 minutes
+            "0 * * * *",  # Every hour
+            "0 0 * * *",  # Daily at midnight
+            "0 0 * * 0",  # Weekly on Sunday
+            "0 0 1 * *",  # Monthly on 1st
+            "0 0 1 1 *",  # Yearly on Jan 1st
         ]
 
         for expr in valid_expressions:

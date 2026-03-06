@@ -5,9 +5,10 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any
 
-from .config import CronConfig
+from ..config import CronConfig
 
 logger = logging.getLogger("fastapi_cron.locking")
+
 
 class LockBackend(ABC):
     """Abstract base class for lock backends."""
@@ -27,6 +28,7 @@ class LockBackend(ABC):
     @abstractmethod
     async def renew_lock(self, key: str, lock_id: str, ttl: int) -> bool:
         """Renew a lock's TTL."""
+
 
 class LocalLockBackend(LockBackend):
     """Local in-memory lock backend for single-instance deployments."""
@@ -50,11 +52,7 @@ class LocalLockBackend(LockBackend):
 
             # Acquire new lock
             lock_id = str(uuid.uuid4())
-            self.locks[key] = {
-                "lock_id": lock_id,
-                "expires_at": now + ttl,
-                "acquired_at": now
-            }
+            self.locks[key] = {"lock_id": lock_id, "expires_at": now + ttl, "acquired_at": now}
 
             return lock_id
 
@@ -87,6 +85,7 @@ class LocalLockBackend(LockBackend):
                 self.locks[key]["expires_at"] = time.time() + ttl
                 return True
             return False
+
 
 class RedisLockBackend(LockBackend):
     """Redis-based lock backend for distributed deployments."""
@@ -152,6 +151,7 @@ class RedisLockBackend(LockBackend):
             logger.error(f"Error renewing lock {key}: {e}")
             return False
 
+
 class DistributedLockManager:
     """Manager for distributed locking with automatic renewal."""
 
@@ -214,7 +214,9 @@ class DistributedLockManager:
                     try:
                         success = await self.backend.renew_lock(key, lock_id, self.config.lock_ttl)
                         if not success:
-                            logger.warning(f"Failed to renew lock for {key}, removing from active locks")
+                            logger.warning(
+                                f"Failed to renew lock for {key}, removing from active locks"
+                            )
                             self.active_locks.pop(key, None)
                         else:
                             logger.debug(f"Renewed lock for {key}")

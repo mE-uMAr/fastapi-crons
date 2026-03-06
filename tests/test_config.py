@@ -1,4 +1,5 @@
 """Tests for CronConfig class."""
+
 from fastapi_crons import CronConfig
 
 

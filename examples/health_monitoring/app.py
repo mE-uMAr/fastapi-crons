@@ -37,8 +37,7 @@ from fastapi_crons import (
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -63,6 +62,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 # CUSTOM HEALTH TRACKING
 # =============================================================================
 
+
 class HealthTracker:
     """
     Custom health tracker for detailed monitoring.
@@ -77,19 +77,18 @@ class HealthTracker:
 
     def record_execution(self, job_name: str, success: bool, duration: float):
         """Record a job execution."""
-        self.job_history.append({
-            "job_name": job_name,
-            "success": success,
-            "duration": duration,
-            "timestamp": datetime.now(timezone.utc),
-        })
+        self.job_history.append(
+            {
+                "job_name": job_name,
+                "success": success,
+                "duration": duration,
+                "timestamp": datetime.now(timezone.utc),
+            }
+        )
 
         # Clean old entries
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.window_minutes)
-        self.job_history = [
-            e for e in self.job_history
-            if e["timestamp"] > cutoff
-        ]
+        self.job_history = [e for e in self.job_history if e["timestamp"] > cutoff]
 
     def get_stats(self) -> dict:
         """Get health statistics."""
@@ -126,6 +125,7 @@ health_tracker = HealthTracker()
 # HEALTH TRACKING HOOKS
 # =============================================================================
 
+
 def track_success(job_name: str, context: dict):
     """Hook to track successful job execution."""
     health_tracker.record_execution(
@@ -147,6 +147,7 @@ def track_failure(job_name: str, context: dict):
 # =============================================================================
 # CRON JOBS
 # =============================================================================
+
 
 @crons.cron("*/1 * * * *", name="healthy_job", tags=["monitored"])
 async def healthy_job():
@@ -205,6 +206,7 @@ for job in crons.get_jobs():
 # HEALTH CHECK ENDPOINTS
 # =============================================================================
 
+
 @app.get("/")
 def root():
     """Root endpoint with health endpoint links."""
@@ -233,12 +235,14 @@ async def detailed_health():
     job_statuses = []
     for job in jobs:
         status = await backend.get_job_status(job.name)
-        job_statuses.append({
-            "name": job.name,
-            "tags": job.tags,
-            "next_run": job.next_run.isoformat(),
-            "status": status.get("status") if status else "unknown",
-        })
+        job_statuses.append(
+            {
+                "name": job.name,
+                "tags": job.tags,
+                "next_run": job.next_run.isoformat(),
+                "status": status.get("status") if status else "unknown",
+            }
+        )
 
     stats = health_tracker.get_stats()
 
@@ -344,27 +348,27 @@ async def prometheus_metrics():
     lines = [
         "# HELP cron_uptime_seconds Uptime in seconds",
         "# TYPE cron_uptime_seconds gauge",
-        f'cron_uptime_seconds {health_tracker.get_uptime():.2f}',
+        f"cron_uptime_seconds {health_tracker.get_uptime():.2f}",
         "",
         "# HELP cron_jobs_total Total number of registered jobs",
         "# TYPE cron_jobs_total gauge",
-        f'cron_jobs_total {len(jobs)}',
+        f"cron_jobs_total {len(jobs)}",
         "",
         "# HELP cron_executions_total Total job executions in last hour",
         "# TYPE cron_executions_total counter",
-        f'cron_executions_total {stats["total_executions"]}',
+        f"cron_executions_total {stats['total_executions']}",
         "",
         "# HELP cron_success_rate Job success rate",
         "# TYPE cron_success_rate gauge",
-        f'cron_success_rate {stats["success_rate"]:.4f}',
+        f"cron_success_rate {stats['success_rate']:.4f}",
         "",
         "# HELP cron_failures_total Job failures in last hour",
         "# TYPE cron_failures_total counter",
-        f'cron_failures_total {stats["failures_last_hour"]}',
+        f"cron_failures_total {stats['failures_last_hour']}",
         "",
         "# HELP cron_avg_duration_seconds Average job duration",
         "# TYPE cron_avg_duration_seconds gauge",
-        f'cron_avg_duration_seconds {stats["avg_duration"]:.4f}',
+        f"cron_avg_duration_seconds {stats['avg_duration']:.4f}",
     ]
 
     return Response(content="\n".join(lines), media_type="text/plain")

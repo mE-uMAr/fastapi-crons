@@ -1,4 +1,5 @@
 """Tests for state backend implementations."""
+
 import asyncio
 from datetime import datetime, timedelta
 
@@ -97,8 +98,7 @@ class TestSQLiteStateBackend:
         duration = 5.0
 
         await sqlite_backend.log_job_execution(
-            job_name, instance_id, "completed",
-            start_time, end_time, duration
+            job_name, instance_id, "completed", start_time, end_time, duration
         )
 
         # Verify the log was created (by checking no exception was raised)
@@ -115,8 +115,7 @@ class TestSQLiteStateBackend:
         error_msg = "Job failed with error"
 
         await sqlite_backend.log_job_execution(
-            job_name, instance_id, "failed",
-            start_time, end_time, duration, error_msg
+            job_name, instance_id, "failed", start_time, end_time, duration, error_msg
         )
 
         # Verify the log was created
@@ -124,6 +123,7 @@ class TestSQLiteStateBackend:
     @pytest.mark.asyncio
     async def test_concurrent_writes(self, sqlite_backend):
         """Test concurrent writes to the database."""
+
         async def write_job(job_num):
             await sqlite_backend.set_last_run(f"job_{job_num}", datetime.now())
 

@@ -1,4 +1,5 @@
 """Tests for job hooks functionality."""
+
 import asyncio
 
 import pytest
@@ -46,10 +47,7 @@ class TestHooks:
         received_context = []
 
         def hook(job_name, context):
-            received_context.append({
-                "job_name": job_name,
-                "context": context
-            })
+            received_context.append({"job_name": job_name, "context": context})
 
         def job_func():
             pass
@@ -58,11 +56,7 @@ class TestHooks:
         job.add_before_run_hook(hook)
 
         # Simulate hook execution
-        context = {
-            "job_name": "my_job",
-            "tags": ["test"],
-            "timestamp": "2024-01-01T00:00:00"
-        }
+        context = {"job_name": "my_job", "tags": ["test"], "timestamp": "2024-01-01T00:00:00"}
         hook("my_job", context)
 
         assert len(received_context) == 1
@@ -100,10 +94,7 @@ class TestHooks:
         error_context = []
 
         def error_hook(job_name, context):
-            error_context.append({
-                "job_name": job_name,
-                "error": context.get("error")
-            })
+            error_context.append({"job_name": job_name, "error": context.get("error")})
 
         def job_func():
             pass
@@ -112,11 +103,7 @@ class TestHooks:
         job.add_on_error_hook(error_hook)
 
         # Simulate error
-        context = {
-            "job_name": "failing_job",
-            "error": "Job execution failed",
-            "success": False
-        }
+        context = {"job_name": "failing_job", "error": "Job execution failed", "success": False}
         error_hook("failing_job", context)
 
         assert len(error_context) == 1

@@ -42,6 +42,7 @@ from fastapi_crons.locking import (
 # Try to import redis
 try:
     import redis.asyncio as redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -53,8 +54,7 @@ except ImportError:
 # =============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -64,10 +64,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 # Get unique instance ID (defaults to hostname + port for uniqueness)
-INSTANCE_ID = os.getenv(
-    "CRON_INSTANCE_ID",
-    f"{socket.gethostname()}-{os.getpid()}"
-)
+INSTANCE_ID = os.getenv("CRON_INSTANCE_ID", f"{socket.gethostname()}-{os.getpid()}")
 
 # Redis configuration
 REDIS_URL = os.getenv("CRON_REDIS_URL", "redis://localhost:6379/0")
@@ -150,6 +147,7 @@ app.include_router(get_cron_router(), prefix="/crons", tags=["Cron Jobs"])
 # CRON JOBS (Only one instance runs each job)
 # =============================================================================
 
+
 @crons.cron("*/1 * * * *", name="exclusive_job", tags=["distributed"])
 async def exclusive_job():
     """
@@ -192,7 +190,7 @@ async def long_running_job():
 
     # Simulate long work
     for i in range(6):
-        logger.info(f"   Progress: {i+1}/6")
+        logger.info(f"   Progress: {i + 1}/6")
         await asyncio.sleep(10)
 
     logger.info(f"✅ Long-running job completed on {INSTANCE_ID}")
@@ -228,6 +226,7 @@ def hourly_synchronized_job():
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
 
 @app.get("/")
 def root():
@@ -268,7 +267,9 @@ async def get_lock_status(job_name: str):
         "job_name": job_name,
         "lock_key": lock_key,
         "is_locked": is_locked,
-        "message": "Job is currently running on another instance" if is_locked else "Job is available",
+        "message": "Job is currently running on another instance"
+        if is_locked
+        else "Job is available",
     }
 
 

@@ -21,6 +21,7 @@ def run_command(cmd, description):
         print(f"❌ {description} failed!")
         return False
 
+
 def main():
     """Main setup function"""
     print("🚀 Setting up fastapi-crons development environment...\n")
@@ -30,10 +31,7 @@ def main():
     os.chdir(project_root)
 
     # Install dependencies
-    if not run_command(
-        "pip install -e '.[dev]'",
-        "Installing dependencies"
-    ):
+    if not run_command("pip install -e '.[dev]'", "Installing dependencies"):
         sys.exit(1)
 
     # Make scripts executable
@@ -63,6 +61,7 @@ def main():
     print("  ./scripts/build.sh         - Build package")
     print("  ./scripts/clean.sh         - Clean build artifacts")
     print("  ./scripts/ci.sh            - Run full CI pipeline")
+
 
 if __name__ == "__main__":
     main()

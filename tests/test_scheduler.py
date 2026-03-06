@@ -19,16 +19,13 @@ class TestCronsScheduler:
         config = CronConfig()
         config.enable_distributed_locking = True
 
-        crons = Crons(
-            state_backend=sqlite_backend,
-            lock_manager=lock_manager,
-            config=config
-        )
+        crons = Crons(state_backend=sqlite_backend, lock_manager=lock_manager, config=config)
 
         assert crons.config.enable_distributed_locking is True
 
     def test_register_job_with_decorator(self, crons_instance):
         """Test registering a job with decorator."""
+
         @crons_instance.cron("*/5 * * * *", name="test_job")
         def my_job():
             pass
@@ -38,6 +35,7 @@ class TestCronsScheduler:
 
     def test_register_multiple_jobs(self, crons_instance):
         """Test registering multiple jobs."""
+
         @crons_instance.cron("*/5 * * * *", name="job1")
         def job1():
             pass
@@ -50,6 +48,7 @@ class TestCronsScheduler:
 
     def test_get_jobs(self, crons_instance):
         """Test retrieving all jobs."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -60,6 +59,7 @@ class TestCronsScheduler:
 
     def test_get_job_by_name(self, crons_instance):
         """Test retrieving a specific job by name."""
+
         @crons_instance.cron("* * * * *", name="specific_job")
         def specific_job_func():
             pass
@@ -75,6 +75,7 @@ class TestCronsScheduler:
 
     def test_add_before_run_hook_to_specific_job(self, crons_instance):
         """Test adding a hook to a specific job."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -89,6 +90,7 @@ class TestCronsScheduler:
 
     def test_add_hook_to_all_jobs(self, crons_instance):
         """Test adding a hook to all jobs."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -107,6 +109,7 @@ class TestCronsScheduler:
 
     def test_hook_chaining(self, crons_instance):
         """Test method chaining for hook addition."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -117,15 +120,14 @@ class TestCronsScheduler:
         def hook2(job_name, context):
             pass
 
-        result = (crons_instance
-                  .add_before_run_hook(hook1)
-                  .add_after_run_hook(hook2))
+        result = crons_instance.add_before_run_hook(hook1).add_after_run_hook(hook2)
 
         assert result == crons_instance
 
     @pytest.mark.asyncio
     async def test_start_scheduler(self, crons_instance):
         """Test starting the scheduler."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -138,6 +140,7 @@ class TestCronsScheduler:
     @pytest.mark.asyncio
     async def test_stop_scheduler(self, crons_instance):
         """Test stopping the scheduler."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
@@ -150,6 +153,7 @@ class TestCronsScheduler:
     @pytest.mark.asyncio
     async def test_start_already_running(self, crons_instance):
         """Test starting scheduler when already running."""
+
         @crons_instance.cron("* * * * *", name="job1")
         def job1():
             pass
