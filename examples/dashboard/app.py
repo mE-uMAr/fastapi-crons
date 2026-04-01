@@ -1,5 +1,5 @@
-from fastapi_crons import Crons, get_cron_router
 from fastapi import FastAPI
+from fastapi_crons import Crons, get_cron_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
