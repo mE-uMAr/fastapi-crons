@@ -6,8 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from . import __version__
-from .config import CronConfig
-from .scheduler import Crons
+from .scheduler import get_crons
 
 # Track server start time for uptime calculation
 _server_start_time: float | None = None
@@ -22,8 +21,8 @@ def get_cron_router():
     router = APIRouter()
 
     # Initialize configuration and scheduler
-    config = CronConfig()
-    crons = Crons(config=config)
+    crons = get_crons()
+    config = crons.config
 
     async def get_all_jobs():
         if not crons:
