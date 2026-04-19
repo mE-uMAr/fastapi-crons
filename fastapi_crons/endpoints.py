@@ -2,8 +2,9 @@ import asyncio
 import inspect
 import time
 from datetime import datetime, timezone
-
-from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Path
+from pathlib import Path as FilePath 
 
 from . import __version__
 from .scheduler import get_crons
@@ -57,6 +58,14 @@ def get_cron_router():
 
             result.append(job_data)
         return result
+    
+    @router.get("/dashboard")
+    async def get_dashboard():
+        """Get dashboard information including all jobs."""
+
+        BASE_DIR = FilePath(__file__).parent  
+
+        return FileResponse(BASE_DIR / "dashboard.html", media_type="text/html")
 
     @router.get("/health")
     async def health_check():
