@@ -1,14 +1,11 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 
-[[package]]
-name = "aiofiles"
-version = "25.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2", size = 46354, upload-time = "2025-10-09T20:51:04.358Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695", size = 14668, upload-time = "2025-10-09T20:51:03.174Z" },
+[manifest]
+members = [
+    "fastapi-crons",
+    "fastapi-crons-dashboard",
 ]
 
 [[package]]
@@ -692,10 +689,9 @@ wheels = [
 
 [[package]]
 name = "fastapi-crons"
-version = "2.2.0"
+version = "2.3.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiofiles" },
     { name = "aiohttp" },
     { name = "aiosqlite" },
     { name = "croniter" },
@@ -707,6 +703,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+dashboard = [
+    { name = "fastapi-crons-dashboard" },
+]
 dev = [
     { name = "build" },
     { name = "httpx" },
@@ -716,7 +715,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "twine" },
-    { name = "types-aiofiles" },
     { name = "types-redis" },
 ]
 otel = [
@@ -733,12 +731,12 @@ sqlmodel = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "aiohttp" },
     { name = "aiosqlite", specifier = ">=0.18.0" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "croniter", specifier = ">=1.3.0" },
     { name = "fastapi", specifier = ">=0.100" },
+    { name = "fastapi-crons-dashboard", marker = "extra == 'dashboard'", editable = "packages/fastapi-crons-dashboard" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.0.0" },
@@ -755,10 +753,14 @@ requires-dist = [
     { name = "sqlmodel", marker = "extra == 'sqlmodel'", specifier = ">=0.0.37" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "typer", extras = ["all"], specifier = ">=0.9.0" },
-    { name = "types-aiofiles", marker = "extra == 'dev'" },
     { name = "types-redis", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev", "otel", "sqlalchemy", "sqlmodel"]
+provides-extras = ["dev", "otel", "sqlalchemy", "sqlmodel", "dashboard"]
+
+[[package]]
+name = "fastapi-crons-dashboard"
+version = "0.1.0"
+source = { editable = "packages/fastapi-crons-dashboard" }
 
 [[package]]
 name = "frozenlist"
@@ -2154,15 +2156,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f5/24/cb09efec5cc954f7f9b930bf8279447d24618bb6758d4f6adf2574c41780/typer-0.24.1.tar.gz", hash = "sha256:e39b4732d65fbdcde189ae76cf7cd48aeae72919dea1fdfc16593be016256b45", size = 118613, upload-time = "2026-02-21T16:54:40.609Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/91/48db081e7a63bb37284f9fbcefda7c44c277b18b0e13fbc36ea2335b71e6/typer-0.24.1-py3-none-any.whl", hash = "sha256:112c1f0ce578bfb4cab9ffdabc68f031416ebcc216536611ba21f04e9aa84c9e", size = 56085, upload-time = "2026-02-21T16:54:41.616Z" },
-]
-
-[[package]]
-name = "types-aiofiles"
-version = "25.1.0.20251011"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/84/6c/6d23908a8217e36704aa9c79d99a620f2fdd388b66a4b7f72fbc6b6ff6c6/types_aiofiles-25.1.0.20251011.tar.gz", hash = "sha256:1c2b8ab260cb3cd40c15f9d10efdc05a6e1e6b02899304d80dfa0410e028d3ff", size = 14535, upload-time = "2025-10-11T02:44:51.237Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/0f/76917bab27e270bb6c32addd5968d69e558e5b6f7fb4ac4cbfa282996a96/types_aiofiles-25.1.0.20251011-py3-none-any.whl", hash = "sha256:8ff8de7f9d42739d8f0dadcceeb781ce27cd8d8c4152d4a7c52f6b20edb8149c", size = 14338, upload-time = "2025-10-11T02:44:50.054Z" },
 ]
 
 [[package]]

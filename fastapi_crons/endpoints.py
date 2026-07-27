@@ -2,11 +2,12 @@ import asyncio
 import inspect
 import time
 from datetime import datetime, timezone
+
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from fastapi import APIRouter, HTTPException, Path
-from pathlib import Path as FilePath 
 
 from . import __version__
+from .dashboard import DASHBOARD_INSTALL_HINT, get_dashboard_html_path
 from .scheduler import get_crons
 
 # Track server start time for uptime calculation
@@ -58,14 +59,20 @@ def get_cron_router():
 
             result.append(job_data)
         return result
-    
-    @router.get("/dashboard")
+
+    @router.get("/dashboard", response_class=FileResponse)
     async def get_dashboard():
-        """Get dashboard information including all jobs."""
+        """Serve the web dashboard UI.
 
-        BASE_DIR = FilePath(__file__).parent  
+        Requires the optional dashboard bundle:
+        ``pip install fastapi-crons[dashboard]``.
+        """
+        try:
+            html_path = get_dashboard_html_path()
+        except (ImportError, FileNotFoundError) as e:
+            raise HTTPException(status_code=501, detail=DASHBOARD_INSTALL_HINT) from e
 
-        return FileResponse(BASE_DIR / "dashboard.html", media_type="text/html")
+        return FileResponse(html_path, media_type="text/html")
 
     @router.get("/health")
     async def health_check():

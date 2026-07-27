@@ -53,6 +53,15 @@ Welcome to the official guide for using `fastapi_crons`, a high-performance, dev
 pip install fastapi-crons
 ```
 
+Optional extras:
+
+```bash
+pip install fastapi-crons[dashboard]   # web monitoring dashboard UI
+pip install fastapi-crons[sqlalchemy]  # SQLAlchemy state/lock backends
+pip install fastapi-crons[sqlmodel]    # SQLModel state/lock backends
+pip install fastapi-crons[otel]        # OpenTelemetry tracing
+```
+
 ---
 
 ## 🛠️ Quick Start
@@ -119,6 +128,34 @@ You'll get a full list of jobs with:
 * `tags`
 * `last_run` (from SQLite)
 * `next_run`
+
+---
+
+## 📊 Web Dashboard
+
+A prebuilt web UI for browsing jobs and their run history is available as an
+optional extra. It is not part of the base install, so the frontend bundle is
+only downloaded if you ask for it:
+
+```bash
+pip install fastapi-crons[dashboard]
+```
+
+Then visit the `/dashboard` route of wherever you mounted the cron router:
+
+```
+GET /dashboard
+```
+
+Without the extra installed, that route returns `501 Not Implemented` with
+installation instructions; every other endpoint works as normal.
+
+See [`examples/dashboard/app.py`](examples/dashboard/app.py) for a runnable
+setup.
+
+> **Note:** the dashboard exposes job names, schedules and run history, and
+> ships with no authentication of its own. Put it behind your own auth or
+> network controls before mounting it on a public deployment.
 
 ---
 

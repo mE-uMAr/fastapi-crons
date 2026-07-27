@@ -21,7 +21,6 @@ dependencies = [
   "redis",
   "pydantic>=2.0.0",
   "aiohttp",
-  "aiofiles>=25.1.0",
 ]
 requires-python = ">=3.10"
 
@@ -32,7 +31,6 @@ dev = [
   "pytest-cov>=4.0.0",
   "ruff>=0.1.0",
   "mypy>=1.0.0",
-  "types-aiofiles",
   "types-redis",
   "build>=1.0.0",
   "httpx>=0.28.1",
@@ -49,13 +47,27 @@ sqlmodel = [
     "sqlalchemy[asyncio]>=2.0.47",
     "sqlmodel>=0.0.37",
 ]
+dashboard = [
+    "fastapi-crons-dashboard>=0.1.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/me-umar/fastapi-crons"
 "Documentation" = "https://crons.meharumar.codes"
 
+# Resolve the dashboard bundle from this repo during local development and CI.
+# Consumers installing from PyPI ignore this and get the published distribution.
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+fastapi-crons-dashboard = { workspace = true }
+
 [tool.setuptools.packages.find]
 where = ["."]
+# Without an explicit include, tests/, examples/ and scripts/ get published as
+# top-level importable packages and collide with anything else named the same.
+include = ["fastapi_crons*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -42,8 +42,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-asyncio httpx 
-        pip install .     
+        pip install pytest pytest-asyncio httpx
+        # Optional backends are exercised by the test suite, so install their
+        # extras. The dashboard bundle comes from this repo rather than PyPI.
+        pip install ".[sqlmodel]"
+        pip install ./packages/fastapi-crons-dashboard
 
     - name: Run tests
       run: pytest tests/
@@ -100,9 +103,14 @@ jobs:
       - name: Install build and twine
         run: pip install build twine  
       - name: Build Package
-        run: python -m build         
+        run: python -m build
+      - name: Build Dashboard Package
+        # Versioned independently of fastapi-crons: the bundle only changes when
+        # the frontend is rebuilt, so most releases re-emit an existing version.
+        run: python -m build --outdir dist ./packages/fastapi-crons-dashboard
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+        # --skip-existing so an unchanged dashboard version does not fail the run.
+        run: twine upload --skip-existing dist/*
