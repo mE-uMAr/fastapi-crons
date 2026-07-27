@@ -21,6 +21,7 @@ dependencies = [
   "redis",
   "pydantic>=2.0.0",
   "aiohttp",
+  "aiofiles>=25.1.0",
 ]
 requires-python = ">=3.10"
 
