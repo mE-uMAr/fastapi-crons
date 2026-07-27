@@ -44,9 +44,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-asyncio httpx
         # Optional backends are exercised by the test suite, so install their
-        # extras. The dashboard bundle comes from this repo rather than PyPI.
+        # extras. The dashboard bundle ships inside the package itself.
         pip install ".[sqlmodel]"
-        pip install ./packages/fastapi-crons-dashboard
 
     - name: Run tests
       run: pytest tests/
@@ -104,13 +103,20 @@ jobs:
         run: pip install build twine  
       - name: Build Package
         run: python -m build
-      - name: Build Dashboard Package
-        # Versioned independently of fastapi-crons: the bundle only changes when
-        # the frontend is rebuilt, so most releases re-emit an existing version.
-        run: python -m build --outdir dist ./packages/fastapi-crons-dashboard
+      - name: Verify the dashboard bundle made it into the wheel
+        # 2.3.0 shipped without it because package-data was never configured.
+        # Fail the release rather than publish a wheel with a broken route.
+        run: |
+          python - <<'EOF'
+          import glob, sys, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          if "fastapi_crons/dashboard.html" not in names:
+              sys.exit(f"dashboard.html missing from {wheel}")
+          print(f"ok: dashboard.html present in {wheel}")
+          EOF
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        # --skip-existing so an unchanged dashboard version does not fail the run.
-        run: twine upload --skip-existing dist/*
+        run: twine upload dist/*

@@ -53,10 +53,9 @@ Welcome to the official guide for using `fastapi_crons`, a high-performance, dev
 pip install fastapi-crons
 ```
 
-Optional extras:
+That includes the web dashboard. Optional extras add the pluggable backends:
 
 ```bash
-pip install fastapi-crons[dashboard]   # web monitoring dashboard UI
 pip install fastapi-crons[sqlalchemy]  # SQLAlchemy state/lock backends
 pip install fastapi-crons[sqlmodel]    # SQLModel state/lock backends
 pip install fastapi-crons[otel]        # OpenTelemetry tracing
@@ -133,22 +132,13 @@ You'll get a full list of jobs with:
 
 ## 📊 Web Dashboard
 
-A prebuilt web UI for browsing jobs and their run history is available as an
-optional extra. It is not part of the base install, so the frontend bundle is
-only downloaded if you ask for it:
-
-```bash
-pip install fastapi-crons[dashboard]
-```
-
-Then visit the `/dashboard` route of wherever you mounted the cron router:
+A prebuilt web UI for browsing jobs and their run history ships with the
+package — no extra needed. Mount the cron router and visit `/dashboard`
+underneath whatever prefix you chose:
 
 ```
 GET /dashboard
 ```
-
-Without the extra installed, that route returns `501 Not Implemented` with
-installation instructions; every other endpoint works as normal.
 
 See [`examples/dashboard/app.py`](examples/dashboard/app.py) for a runnable
 setup.
@@ -324,12 +314,12 @@ We welcome PRs and suggestions! If you'd like this added to FastAPI officially, 
 ---
 
 #### Need help? Reach out:
-[Email me](mailto:contact@meharumar.codes)
+[Email me](mailto:support@darcode.dev)
 
 [github](https://github.com/me-umar)
 
 ## Read Documentation at:
-[Documentation](https://crons.meharumar.codes)
+[Documentation](https://crons.darcode.dev)
 ---
 ## 💬 Credits
 

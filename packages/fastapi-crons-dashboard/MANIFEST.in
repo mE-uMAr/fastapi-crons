@@ -1,4 +1,0 @@
-include README.md
-include LICENSE
-include fastapi_crons_dashboard/dashboard.html
-include fastapi_crons_dashboard/py.typed

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from . import __version__
-from .dashboard import DASHBOARD_INSTALL_HINT, get_dashboard_html_path
+from .dashboard import DASHBOARD_MISSING_HINT, get_dashboard_html_path
 from .scheduler import get_crons
 
 # Track server start time for uptime calculation
@@ -62,15 +62,11 @@ def get_cron_router():
 
     @router.get("/dashboard", response_class=FileResponse)
     async def get_dashboard():
-        """Serve the web dashboard UI.
-
-        Requires the optional dashboard bundle:
-        ``pip install fastapi-crons[dashboard]``.
-        """
+        """Serve the web dashboard UI."""
         try:
             html_path = get_dashboard_html_path()
-        except (ImportError, FileNotFoundError) as e:
-            raise HTTPException(status_code=501, detail=DASHBOARD_INSTALL_HINT) from e
+        except FileNotFoundError as e:
+            raise HTTPException(status_code=500, detail=DASHBOARD_MISSING_HINT) from e
 
         return FileResponse(html_path, media_type="text/html")
 

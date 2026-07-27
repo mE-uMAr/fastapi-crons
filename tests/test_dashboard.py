@@ -1,6 +1,4 @@
-"""Tests for the optional dashboard extra."""
-
-import builtins
+"""Tests for the bundled web dashboard."""
 
 import pytest
 from fastapi import FastAPI
@@ -8,9 +6,9 @@ from fastapi.testclient import TestClient
 
 from fastapi_crons import Crons, get_cron_router
 from fastapi_crons.dashboard import (
-    DASHBOARD_INSTALL_HINT,
+    DASHBOARD_MISSING_HINT,
     get_dashboard_html_path,
-    is_dashboard_installed,
+    is_dashboard_available,
 )
 
 
@@ -22,58 +20,56 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture
-def dashboard_missing(monkeypatch):
-    """Simulate a base install without the fastapi-crons-dashboard package."""
-    real_import = builtins.__import__
+class TestDashboardBundled:
+    """The bundle ships inside the package and must be present."""
 
-    def fake_import(name, *args, **kwargs):
-        if name == "fastapi_crons_dashboard":
-            raise ImportError("No module named 'fastapi_crons_dashboard'")
-        return real_import(name, *args, **kwargs)
+    def test_bundle_is_available(self):
+        assert is_dashboard_available() is True
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
+    def test_path_points_at_a_real_file(self):
+        path = get_dashboard_html_path()
+        assert path.is_file()
+        assert path.name == "dashboard.html"
 
+    def test_bundle_lives_inside_the_package(self):
+        """Guards against the bundle drifting back out of the package."""
+        import fastapi_crons
 
-class TestDashboardNotInstalled:
-    """The base install must stay usable without the dashboard bundle."""
+        package_dir = next(iter(fastapi_crons.__path__))
+        assert get_dashboard_html_path().parent == type(get_dashboard_html_path())(package_dir)
 
-    def test_is_dashboard_installed_returns_false(self, dashboard_missing):
-        assert is_dashboard_installed() is False
-
-    def test_get_path_raises_with_install_hint(self, dashboard_missing):
-        with pytest.raises(ImportError, match=r"fastapi-crons\[dashboard\]"):
-            get_dashboard_html_path()
-
-    def test_route_returns_501_with_install_hint(self, client, dashboard_missing):
-        response = client.get("/api/dashboard")
-        assert response.status_code == 501
-        assert "fastapi-crons[dashboard]" in response.json()["detail"]
-
-    def test_other_routes_still_work(self, client, dashboard_missing):
-        """A missing dashboard must not break the rest of the router."""
-        assert client.get("/api/health").status_code == 200
-        assert client.get("/api/").status_code == 200
-
-
-class TestDashboardInstalled:
-    """Behaviour when the optional bundle is present."""
-
-    def test_serves_html(self, client):
-        pytest.importorskip("fastapi_crons_dashboard")
-
+    def test_route_serves_html(self, client):
         response = client.get("/api/dashboard")
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/html")
         assert "<!doctype html>" in response.text[:200].lower()
 
-    def test_bundle_path_exists(self):
-        pytest.importorskip("fastapi_crons_dashboard")
 
-        path = get_dashboard_html_path()
-        assert path.is_file()
-        assert path.name == "dashboard.html"
+class TestDashboardMissing:
+    """A build without package data must fail loudly, not silently 500."""
+
+    def test_get_path_raises_with_reinstall_hint(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
+        )
+        with pytest.raises(FileNotFoundError, match="force-reinstall"):
+            get_dashboard_html_path()
+
+    def test_route_reports_the_problem(self, client, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
+        )
+        response = client.get("/api/dashboard")
+        assert response.status_code == 500
+        assert "force-reinstall" in response.json()["detail"]
+
+    def test_other_routes_are_unaffected(self, client, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
+        )
+        assert client.get("/api/health").status_code == 200
+        assert client.get("/api/").status_code == 200
 
 
-def test_install_hint_names_the_extra():
-    assert "pip install fastapi-crons[dashboard]" in DASHBOARD_INSTALL_HINT
+def test_missing_hint_tells_you_what_to_do():
+    assert "reinstall" in DASHBOARD_MISSING_HINT.lower()

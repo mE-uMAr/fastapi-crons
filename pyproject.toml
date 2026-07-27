@@ -9,7 +9,7 @@ description = "Cron scheduling extension for FastAPI with decorators, async supp
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-  { name="Mehar Umar", email="contact@meharumar.codes" }
+  { name="Mehar Umar", email="support@darcode.dev" }
 ]
 keywords = ["fastapi", "cron", "scheduler", "background jobs", "tasks", "async crons", "fastapi crons", "crons"]
 dependencies = [
@@ -47,27 +47,27 @@ sqlmodel = [
     "sqlalchemy[asyncio]>=2.0.47",
     "sqlmodel>=0.0.37",
 ]
-dashboard = [
-    "fastapi-crons-dashboard>=0.1.0",
-]
+# The dashboard bundle ships inside the wheel, so this extra needs nothing.
+# It is kept so `pip install fastapi-crons[dashboard]` — which is already
+# documented and published in 2.4.0's metadata — keeps working silently.
+dashboard = []
 
 [project.urls]
 "Homepage" = "https://github.com/me-umar/fastapi-crons"
-"Documentation" = "https://crons.meharumar.codes"
-
-# Resolve the dashboard bundle from this repo during local development and CI.
-# Consumers installing from PyPI ignore this and get the published distribution.
-[tool.uv.workspace]
-members = ["packages/*"]
-
-[tool.uv.sources]
-fastapi-crons-dashboard = { workspace = true }
+"Documentation" = "https://crons.darcode.dev"
 
 [tool.setuptools.packages.find]
 where = ["."]
 # Without an explicit include, tests/, examples/ and scripts/ get published as
 # top-level importable packages and collide with anything else named the same.
 include = ["fastapi_crons*"]
+
+# dashboard.html is not a .py file, so setuptools will not pick it up on its
+# own. Without this the wheel builds fine but ships no bundle, and GET
+# /dashboard raises FileNotFoundError on every pip install — which is exactly
+# what happened in 2.3.0.
+[tool.setuptools.package-data]
+fastapi_crons = ["dashboard.html", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

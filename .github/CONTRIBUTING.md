@@ -242,7 +242,7 @@ Include:
 
 - Open a discussion on GitHub
 - Check existing issues and discussions
-- Email: contact@meharumar.codes
+- Email: support@darcode.dev
 
 ## License
 
