@@ -247,7 +247,21 @@ Jobs can be:
 fastapi-crons list
 
 # Manually run a specific job
-fastapi-crons run_job <job_name>
+# -i imports the module that registers your jobs (repeatable)
+fastapi-crons run-job <job_name> -i myapp.jobs
+
+# Show overall system status
+fastapi-crons status
+
+# Inspect / change configuration
+fastapi-crons config-show
+fastapi-crons config-set <key> <value>
+
+# Run the scheduler outside of a FastAPI app
+fastapi-crons start-scheduler -i myapp.jobs
+
+# See every command and its options
+fastapi-crons --help
 ```
 
 >

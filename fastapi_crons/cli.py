@@ -1,6 +1,10 @@
 import asyncio
+import importlib
 import inspect
+import os
+import sys
 from datetime import datetime, timezone
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -59,6 +63,82 @@ def get_state_backend():
     return state_backend
 
 
+async def _aclose(obj) -> None:
+    """Close a backend or client, whichever close method it happens to expose."""
+    if obj is None:
+        return
+    closer = getattr(obj, "aclose", None) or getattr(obj, "close", None)
+    if closer is None:
+        return
+    try:
+        result = closer()
+        if inspect.isawaitable(result):
+            await result
+    except Exception:
+        # Teardown must never mask the command's own output or exit code.
+        pass
+
+
+async def _close_backends() -> None:
+    """Release the connections opened by get_state_backend/get_lock_manager."""
+    global state_backend, lock_manager
+
+    backend, manager = state_backend, lock_manager
+    state_backend = lock_manager = None
+
+    if backend is not None:
+        # SQLiteStateBackend.close() closes the connection; RedisStateBackend
+        # has no close() of its own, so fall back to the client it wraps.
+        if hasattr(backend, "close"):
+            await _aclose(backend)
+        else:
+            await _aclose(getattr(backend, "redis", None))
+
+    if manager is not None:
+        await _aclose(getattr(getattr(manager, "backend", None), "redis", None))
+
+
+def import_job_modules(modules: list[str] | None) -> None:
+    """Import the modules that register the user's jobs.
+
+    Jobs register themselves into the process-global Crons instance when their
+    module is imported, so a standalone CLI process sees an empty registry
+    until those modules are loaded. A console script also starts with its own
+    bin/ directory on sys.path rather than the working directory, so add the
+    latter to make `-i myapp.jobs` work from a project root.
+    """
+    if not modules:
+        return
+
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    for module in modules:
+        try:
+            importlib.import_module(module)
+        except Exception as e:
+            console.print(f"[red]Could not import '{module}': {e}[/red]")
+            raise typer.Exit(code=1) from e
+
+
+def run_async(main) -> None:
+    """Run a command coroutine and then tear down its backends.
+
+    aiosqlite services each connection from a non-daemon worker thread, so a
+    command that opens the SQLite backend without closing it prints its output
+    and then hangs at interpreter shutdown forever instead of exiting.
+    """
+
+    async def runner():
+        try:
+            await main()
+        finally:
+            await _close_backends()
+
+    asyncio.run(runner())
+
+
 def get_lock_manager():
     """Get the appropriate lock manager based on configuration."""
     global lock_manager
@@ -91,7 +171,10 @@ def get_lock_manager():
     return lock_manager
 
 
-@cli.command()
+# Command names are pinned explicitly: Typer derives them from the function
+# name, and that mapping has changed between releases (underscores used to be
+# kept, now they become dashes). The documented names should not move with it.
+@cli.command("config-set")
 def config_set(
     key: str = typer.Argument(..., help="Configuration key"),
     value: str = typer.Argument(..., help="Configuration value"),
@@ -114,7 +197,7 @@ def config_set(
         console.print("Available keys:", list(config.__dict__.keys()))
 
 
-@cli.command()
+@cli.command("config-show")
 def config_show():
     """Show current configuration."""
     table = Table(title="Current Configuration")
@@ -127,7 +210,7 @@ def config_show():
     console.print(table)
 
 
-@cli.command()
+@cli.command("list")
 def list_jobs():
     """List all registered jobs and their status."""
 
@@ -169,7 +252,7 @@ def list_jobs():
                 progress.remove_task(task)
                 console.print(f"[red]Error loading jobs: {e}[/red]")
 
-    asyncio.run(run())
+    run_async(run)
 
 
 async def execute_hook(hook, job_name: str, context: dict):
@@ -183,12 +266,21 @@ async def execute_hook(hook, job_name: str, context: dict):
         console.print(f"[red][Hook Error][{job_name}] {e}[/red]")
 
 
-@cli.command()
+@cli.command("run-job")
 def run_job(
     name: str = typer.Argument(..., help="Job name to run"),
     force: bool = typer.Option(False, "--force", "-f", help="Force run even if locked"),
+    modules: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--import",
+            "-i",
+            help="Module that registers your jobs, e.g. myapp.jobs (repeatable)",
+        ),
+    ] = None,
 ):
     """Manually run a specific job."""
+    import_job_modules(modules)
 
     async def run():
         from .scheduler import Crons
@@ -224,6 +316,10 @@ def run_job(
             SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
         ) as progress:
             task = progress.add_task(f"Running job '{name}'...", total=None)
+
+            # Bound before the try so the finally below can read it even when
+            # acquire_lock itself raises (Redis down, for instance).
+            lock_id = None
 
             try:
                 # Acquire lock
@@ -333,10 +429,10 @@ def run_job(
                 if lock_id:
                     await lock_mgr.release_lock(f"job:{name}")
 
-    asyncio.run(run())
+    run_async(run)
 
 
-@cli.command()
+@cli.command("status")
 def status():
     """Show overall system status."""
 
@@ -379,16 +475,26 @@ def status():
         except Exception as e:
             console.print(f"[red]Error getting status: {e}[/red]")
 
-    asyncio.run(run())
+    run_async(run)
 
 
-@cli.command()
+@cli.command("start-scheduler")
 def start_scheduler(
     daemon: bool = typer.Option(False, "--daemon", "-d", help="Run as daemon"),
     log_level: str = typer.Option("INFO", "--log-level", help="Log level"),
+    modules: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--import",
+            "-i",
+            help="Module that registers your jobs, e.g. myapp.jobs (repeatable)",
+        ),
+    ] = None,
 ):
     """Start the cron scheduler."""
     import logging
+
+    import_job_modules(modules)
 
     # Configure logging
     logging.basicConfig(
@@ -434,12 +540,12 @@ def start_scheduler(
             console.print("[green]Scheduler stopped[/green]")
 
     try:
-        asyncio.run(run())
+        run_async(run)
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted[/yellow]")
 
 
-@cli.command()
+@cli.command("logs")
 def logs(
     job_name: str | None = typer.Option(None, "--job", "-j", help="Filter by job name"),
     limit: int = typer.Option(50, "--limit", "-l", help="Number of log entries to show"),
@@ -454,7 +560,7 @@ def logs(
         # For now, show a placeholder message
         console.print("[yellow]Log viewing feature coming soon[/yellow]")
 
-    asyncio.run(run())
+    run_async(run)
 
 
 if __name__ == "__main__":
