@@ -37,7 +37,8 @@ logger = logging.getLogger("fastapi_cron.locking.sqlalchemy")
 
 
 try:
-    from sqlalchemy import MetaData, String, delete, select, update
+    from sqlalchemy import MetaData, String, delete, insert, select, update
+    from sqlalchemy.exc import DBAPIError, IntegrityError
     from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 except ImportError as err:
     raise ImportError(
@@ -69,28 +70,6 @@ SQLAlchemy MetaData containing the cron_locks table.
     from fastapi_crons.locking.sqlalchemy import cron_locks_metadata
     target_metadata = [Base.metadata, cron_locks_metadata]
 """
-
-
-def _upsert_lock(dialect_name: str, values: dict[str, Any], set_cols: dict[str, Any]) -> Any:
-    if dialect_name in ("mysql", "mariadb"):
-        from sqlalchemy.dialects.mysql import insert as mysql_insert
-
-        return mysql_insert(_CronLock).values(**values).on_duplicate_key_update(**set_cols)
-
-    if dialect_name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as insert
-    elif dialect_name == "sqlite":
-        from sqlalchemy.dialects.sqlite import insert as insert  # type: ignore[assignment]
-    else:
-        raise NotImplementedError(
-            f"Unsupported dialect: {dialect_name!r}. Supported: postgresql, sqlite, mysql, mariadb."
-        )
-
-    return (
-        insert(_CronLock)
-        .values(**values)
-        .on_conflict_do_update(index_elements=["key"], set_=set_cols)
-    )
 
 
 class SQLAlchemyLockBackend(LockBackend):
@@ -164,29 +143,29 @@ class SQLAlchemyLockBackend(LockBackend):
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
 
+        # Reap expired locks so they can be taken over.
         await self._run(delete(_CronLock).where(_CronLock.expires_at <= now_iso))
 
-        result = await self._run(
-            select(_CronLock.lock_id, _CronLock.expires_at).where(_CronLock.key == key)
-        )
-        row = result.fetchone()
-        if row:
-            return None
-
         lock_id = str(uuid.uuid4())
-        expires_at = (now + timedelta(seconds=ttl)).isoformat()
         values = {
             "key": key,
             "lock_id": lock_id,
             "acquired_by": self._instance_id,
             "acquired_at": now_iso,
-            "expires_at": expires_at,
+            "expires_at": (now + timedelta(seconds=ttl)).isoformat(),
         }
-        set_cols = {k: v for k, v in values.items() if k != "key"}
 
+        # A plain INSERT, deliberately: the primary key on `key` is what makes
+        # exactly one caller win. Selecting first and then upserting is not
+        # atomic — two processes both see no row, both upsert, and the second
+        # ON CONFLICT DO UPDATE overwrites the first one's lock, so both
+        # believe they hold it and the same job runs twice.
         try:
-            await self._run(_upsert_lock(self._dialect, values, set_cols))
+            await self._run(insert(_CronLock).values(**values))
             return lock_id
+        except (IntegrityError, DBAPIError) as e:
+            logger.debug("Lock %s is already held: %s", key, e)
+            return None
         except Exception as e:
             logger.debug("Lock acquisition race for %s: %s", key, e)
             return None

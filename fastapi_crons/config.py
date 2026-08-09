@@ -25,6 +25,12 @@ class CronConfig:
         ).lower() in ("true", "1", "yes")
         self.lock_ttl: int = int(os.getenv("CRON_LOCK_TTL", "300"))  # 5 minutes default
 
+        # Namespace for every lock key written to a shared store. Redis is
+        # frequently shared with the rest of the application, so the keys are
+        # namespaced rather than sitting on a bare "lock:" prefix that anything
+        # else could collide with.
+        self.lock_key_prefix: str = os.getenv("CRON_LOCK_KEY_PREFIX", "fastapi_crons:lock:")
+
         # Logging configuration
         self.log_level: str = os.getenv("CRON_LOG_LEVEL", "INFO")
         self.enable_job_logging: bool = os.getenv("CRON_ENABLE_JOB_LOGGING", "true").lower() in (

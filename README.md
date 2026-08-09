@@ -74,7 +74,9 @@ from fastapi_crons import Crons, get_cron_router
 app = FastAPI()
 crons = Crons(app)
 
-app.include_router(get_cron_router())
+# Mount the management endpoints under a prefix. Without one they are served
+# from the application root, where `GET /{job_name}` shadows your own routes.
+app.include_router(get_cron_router(), prefix="/crons")
 
 @app.get("/")
 def root():
@@ -227,6 +229,49 @@ from fastapi_crons import Crons, SQLiteStateBackend
 state_backend = SQLiteStateBackend(db_path="/path/to/my_crons.db")
 crons = Crons(state_backend=state_backend)
 ```
+
+---
+
+## 👥 Running Multiple Workers
+
+Every worker registers the same jobs, so when a job becomes due exactly one
+worker must execute it. Point all workers at a shared lock backend and that is
+guaranteed: each scheduled tick is claimed atomically, and the worker that wins
+the claim is the only one that runs it.
+
+```bash
+export CRON_ENABLE_DISTRIBUTED_LOCKING=true
+export CRON_REDIS_URL=redis://localhost:6379/0
+```
+
+```python
+# ...or wire a backend explicitly (a URL works, a client is not required)
+from fastapi_crons import Crons, CronConfig, DistributedLockManager
+from fastapi_crons.locking import RedisLockBackend
+
+config  = CronConfig()
+manager = DistributedLockManager(RedisLockBackend(config.redis_url), config)
+crons   = Crons(app, lock_manager=manager)
+```
+
+No Redis? The SQLAlchemy lock backend coordinates through your existing
+database instead:
+
+```python
+from fastapi_crons.locking.sqlalchemy import SQLAlchemyLockBackend
+
+manager = DistributedLockManager(SQLAlchemyLockBackend(engine), CronConfig())
+```
+
+Two things to know:
+
+* The default `SQLiteStateBackend` is per-machine. Workers spread across hosts
+  need Redis or the SQLAlchemy state backend.
+* Lock keys are namespaced `fastapi_crons:lock:` so they cannot collide with
+  anything else in a shared Redis. Override with `CRON_LOCK_KEY_PREFIX`.
+
+A job that takes longer than its own interval does not queue up: ticks that
+elapse while it runs are coalesced, and it resumes at the next scheduled time.
 
 ---
 

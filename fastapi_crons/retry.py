@@ -113,7 +113,7 @@ def retry_on_failure(
     )
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:

@@ -9,6 +9,9 @@ from ..config import CronConfig
 
 logger = logging.getLogger("fastapi_cron.locking")
 
+# Kept in sync with CronConfig.lock_key_prefix, for backends built directly.
+DEFAULT_LOCK_KEY_PREFIX = "fastapi_crons:lock:"
+
 
 class LockBackend(ABC):
     """Abstract base class for lock backends."""
@@ -41,6 +44,14 @@ class LocalLockBackend(LockBackend):
         """Acquire a lock locally."""
         async with self._lock:
             now = time.time()
+
+            # Drop everything that has expired, not just this key. Per-tick
+            # claim keys are never released explicitly (they expire, which is
+            # what stops a second worker re-running the same tick), so without
+            # this sweep the dict would grow by one entry per tick forever.
+            expired = [k for k, v in self.locks.items() if v["expires_at"] <= now]
+            for k in expired:
+                del self.locks[k]
 
             # Check if lock exists and is still valid
             if key in self.locks:
@@ -90,13 +101,33 @@ class LocalLockBackend(LockBackend):
 class RedisLockBackend(LockBackend):
     """Redis-based lock backend for distributed deployments."""
 
-    def __init__(self, redis_client: Any) -> None:
+    def __init__(self, redis_client: Any, *, key_prefix: str = DEFAULT_LOCK_KEY_PREFIX) -> None:
+        """Build a backend from a Redis client or from a connection URL.
+
+        Passing a URL ("redis://host:6379/0", "rediss://...", "unix:///...")
+        is accepted so callers are not forced to construct and manage a client
+        themselves just to use distributed locking.
+        """
+        if isinstance(redis_client, str):
+            try:
+                import redis.asyncio as redis_asyncio
+            except ImportError as e:
+                raise ImportError(
+                    "redis is required to build a lock backend from a URL.\n"
+                    "Install with: pip install redis"
+                ) from e
+            redis_client = redis_asyncio.from_url(redis_client)
+
         self.redis = redis_client
+        self.key_prefix = key_prefix
+
+    def _key(self, key: str) -> str:
+        return f"{self.key_prefix}{key}"
 
     async def acquire_lock(self, key: str, ttl: int) -> str | None:
         """Acquire a distributed lock using Redis."""
         lock_id = str(uuid.uuid4())
-        lock_key = f"lock:{key}"
+        lock_key = self._key(key)
 
         # Use SET with NX (only if not exists) and EX (expiration)
         result = await self.redis.set(lock_key, lock_id, nx=True, ex=ttl)
@@ -107,7 +138,7 @@ class RedisLockBackend(LockBackend):
 
     async def release_lock(self, key: str, lock_id: str) -> bool:
         """Release a distributed lock using Redis with Lua script for atomicity."""
-        lock_key = f"lock:{key}"
+        lock_key = self._key(key)
 
         # Lua script to ensure we only delete the lock if we own it
         lua_script = """
@@ -127,13 +158,13 @@ class RedisLockBackend(LockBackend):
 
     async def is_locked(self, key: str) -> bool:
         """Check if a key is locked in Redis."""
-        lock_key = f"lock:{key}"
+        lock_key = self._key(key)
         result = await self.redis.exists(lock_key)
         return bool(result)
 
     async def renew_lock(self, key: str, lock_id: str, ttl: int) -> bool:
         """Renew a lock's TTL in Redis."""
-        lock_key = f"lock:{key}"
+        lock_key = self._key(key)
 
         # Lua script to renew lock only if we own it
         lua_script = """
@@ -172,6 +203,18 @@ class DistributedLockManager:
 
         return lock_id
 
+    async def claim(self, key: str, ttl: int | None = None) -> bool:
+        """Claim a key exactly once, for the lifetime of the TTL.
+
+        Unlike acquire_lock this is deliberately fire-and-forget: the claim is
+        never released and never renewed, it only expires. That is what makes
+        it usable as a fence for "has anyone already handled this?" — releasing
+        it on completion would let the next worker to come along claim the same
+        thing again and redo the work.
+        """
+        lock_id = await self.backend.acquire_lock(key, ttl or self.config.lock_ttl)
+        return lock_id is not None
+
     async def release_lock(self, key: str) -> bool:
         """Release a lock and stop tracking it."""
         if key not in self.active_locks:
@@ -202,8 +245,10 @@ class DistributedLockManager:
         """Background task to renew active locks."""
         while self._running:
             try:
-                # Renew locks at half the TTL interval
-                renewal_interval = self.config.lock_ttl // 2
+                # Renew locks at half the TTL interval. Floored at 1s: a
+                # lock_ttl below 2 floors the division to 0 and turns this
+                # into a busy loop hammering the backend.
+                renewal_interval = max(1, self.config.lock_ttl // 2)
                 await asyncio.sleep(renewal_interval)
 
                 if not self.active_locks:

@@ -59,7 +59,9 @@ class Crons:
                             password=self.config.redis_password,
                         )
                     )
-                    lock_backend = RedisLockBackend(redis_client)
+                    lock_backend = RedisLockBackend(
+                        redis_client, key_prefix=self.config.lock_key_prefix
+                    )
                     self.lock_manager = DistributedLockManager(lock_backend, self.config)
                 except Exception as e:
                     logger.warning(f"Failed to initialize Redis lock backend: {e}")

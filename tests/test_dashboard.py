@@ -49,24 +49,18 @@ class TestDashboardMissing:
     """A build without package data must fail loudly, not silently 500."""
 
     def test_get_path_raises_with_reinstall_hint(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(
-            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
-        )
+        monkeypatch.setattr("fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html")
         with pytest.raises(FileNotFoundError, match="force-reinstall"):
             get_dashboard_html_path()
 
     def test_route_reports_the_problem(self, client, monkeypatch, tmp_path):
-        monkeypatch.setattr(
-            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
-        )
+        monkeypatch.setattr("fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html")
         response = client.get("/api/dashboard")
         assert response.status_code == 500
         assert "force-reinstall" in response.json()["detail"]
 
     def test_other_routes_are_unaffected(self, client, monkeypatch, tmp_path):
-        monkeypatch.setattr(
-            "fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html"
-        )
+        monkeypatch.setattr("fastapi_crons.dashboard.DASHBOARD_HTML", tmp_path / "dashboard.html")
         assert client.get("/api/health").status_code == 200
         assert client.get("/api/").status_code == 200
 

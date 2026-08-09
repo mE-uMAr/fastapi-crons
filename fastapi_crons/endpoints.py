@@ -14,13 +14,20 @@ from .scheduler import get_crons
 _server_start_time: float | None = None
 
 
-def get_cron_router():
-    """Get the cron management router with automatic initialization."""
+def get_cron_router(prefix: str = ""):
+    """Get the cron management router with automatic initialization.
+
+    Args:
+        prefix: Path prefix to mount the routes under, e.g. "/crons". Mounting
+            at the root is the default for backwards compatibility, but it puts
+            a catch-all ``GET /{job_name}`` route at the application root, which
+            will shadow other single-segment routes. Prefer a prefix.
+    """
     global _server_start_time
     if _server_start_time is None:
         _server_start_time = time.time()
 
-    router = APIRouter()
+    router = APIRouter(prefix=prefix)
 
     # Initialize configuration and scheduler
     crons = get_crons()
@@ -273,7 +280,7 @@ def get_cron_router():
             start_time = datetime.now(timezone.utc)
 
             try:
-                if asyncio.iscoroutinefunction(job.func):
+                if inspect.iscoroutinefunction(job.func):
                     result = await job.func()
                 else:
                     result = await asyncio.to_thread(job.func)

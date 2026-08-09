@@ -43,8 +43,21 @@ class CronJob:
         self.after_run_hooks: list[HookFunc] = []
         self.on_error_hooks: list[HookFunc] = []
 
-    def update_next_run(self) -> None:
+    def update_next_run(self, after: datetime | None = None) -> None:
+        """Advance to the next fire time, optionally skipping elapsed ones.
+
+        Passing ``after`` coalesces ticks that went by while the job was
+        running. Without it a job slower than its own interval never catches
+        up: it finishes, immediately runs the tick it already missed, and falls
+        one further behind on every pass. That also makes each worker's idea of
+        "the next tick" depend on its own execution history, so workers stop
+        agreeing on which tick is which.
+        """
         self.next_run = self._cron_iter.get_next(datetime)
+
+        if after is not None:
+            while self.next_run <= after:
+                self.next_run = self._cron_iter.get_next(datetime)
 
     def add_before_run_hook(self, hook: HookFunc) -> "CronJob":
         """Add a hook to be executed before the job runs."""

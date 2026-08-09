@@ -37,7 +37,7 @@ async def execute_job_with_timeout(
     timeout: float | None,
 ) -> Any:
     """Execute a job with optional timeout."""
-    if asyncio.iscoroutinefunction(job.func):
+    if inspect.iscoroutinefunction(job.func):
         coro = job.func()
     else:
         coro = asyncio.to_thread(job.func)
@@ -87,13 +87,34 @@ async def run_job_loop(
                 logger.debug(f"Job '{job.name}' waiting {seconds:.1f} seconds until next run")
                 await asyncio.sleep(seconds)
 
-            # Try to acquire distributed lock
+            # Claim this specific scheduled tick. Every worker computes the
+            # same fire times from the same cron expression, so the tick
+            # timestamp is a stable shared identity for "this run" and exactly
+            # one worker wins the claim.
+            #
+            # The job-name lock below cannot do this on its own: it is released
+            # the moment execution finishes, so a worker whose loop wakes even a
+            # few milliseconds later would acquire it cleanly and run the same
+            # tick a second time.
+            scheduled = job.next_run
+            claim_key = f"job:{job.name}:tick:{scheduled.isoformat()}"
+
+            if not await lock_manager.claim(claim_key):
+                logger.debug(
+                    f"Job '{job.name}' tick {scheduled.isoformat()} already claimed "
+                    f"by another instance, skipping"
+                )
+                job.update_next_run(datetime.now(timezone.utc))
+                continue
+
+            # Guard against overlapping runs: this tick is ours, but a previous
+            # tick may still be executing somewhere.
             lock_key = f"job:{job.name}"
             lock_id = await lock_manager.acquire_lock(lock_key)
 
             if not lock_id:
                 logger.info(f"Job '{job.name}' is locked by another instance, skipping")
-                job.update_next_run()
+                job.update_next_run(datetime.now(timezone.utc))
                 continue
 
             try:
@@ -119,6 +140,7 @@ async def run_job_loop(
                 start_time = datetime.now(timezone.utc)
                 last_error: Exception | None = None
                 attempt = 0
+                succeeded = False
 
                 # Retry loop
                 while attempt <= max_retries:
@@ -164,6 +186,7 @@ async def run_job_loop(
                         )
 
                         logger.info(f"Job '{job.name}' completed successfully in {duration:.2f}s")
+                        succeeded = True
                         break  # Success, exit retry loop
 
                     except Exception as e:
@@ -193,10 +216,12 @@ async def run_job_loop(
                             # All retries exhausted or non-retryable error
                             break
 
-                # Handle final failure (after all retries)
-                if last_error is not None and (
-                    attempt >= max_retries or isinstance(last_error, JobTimeoutError)
-                ):
+                # Handle final failure (after all retries). This keys off actual
+                # success, not the attempt counter: a job that failed once and
+                # then succeeded on its final attempt still has last_error set
+                # and attempt == max_retries, and used to be recorded as failed
+                # and fire on_error hooks despite having succeeded.
+                if not succeeded and last_error is not None:
                     end_time = datetime.now(timezone.utc)
                     duration = (end_time - start_time).total_seconds()
                     error = str(last_error)
@@ -237,7 +262,7 @@ async def run_job_loop(
                 # Always release the lock
                 await lock_manager.release_lock(lock_key)
 
-            job.update_next_run()
+            job.update_next_run(datetime.now(timezone.utc))
             logger.debug(f"Job '{job.name}' next run scheduled for {job.next_run}")
 
         except asyncio.CancelledError:

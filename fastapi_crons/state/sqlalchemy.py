@@ -317,7 +317,10 @@ class SQLAlchemyStateBackend(StateBackend):
     async def dispose(self) -> None:
         """Dispose the engine connection pool gracefully."""
         if self._is_async:
-            await cast(AsyncEngine, self._engine).dispose()
+            # Quoted: AsyncEngine is only imported under TYPE_CHECKING, and
+            # `from __future__ import annotations` does not defer a runtime
+            # cast() argument, so the bare name raised NameError here.
+            await cast("AsyncEngine", self._engine).dispose()
         else:
             await asyncio.to_thread(self._engine.dispose)
 

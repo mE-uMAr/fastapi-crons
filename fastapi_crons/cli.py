@@ -158,7 +158,7 @@ def get_lock_manager():
                         password=config.redis_password,
                     )
                 )
-                lock_backend = RedisLockBackend(redis_client)
+                lock_backend = RedisLockBackend(redis_client, key_prefix=config.lock_key_prefix)
             except Exception as e:
                 console.print(
                     f"[yellow]Error connecting to Redis: {e}, using local locking: {e}[/yellow]"
@@ -348,7 +348,7 @@ def run_job(
                 start_time = datetime.now(timezone.utc)
 
                 try:
-                    if asyncio.iscoroutinefunction(target_job.func):
+                    if inspect.iscoroutinefunction(target_job.func):
                         result = await target_job.func()
                     else:
                         result = await asyncio.to_thread(target_job.func)

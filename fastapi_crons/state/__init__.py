@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -161,11 +162,24 @@ class SQLiteStateBackend(StateBackend):
                     (job_name, status, instance_id, now, now),
                 )
             else:
+                # Upsert rather than UPDATE. A plain UPDATE matches zero rows
+                # whenever there is no "running" row for this instance — for
+                # example when another instance overwrote it in between — and
+                # the terminal status was then silently dropped, leaving the
+                # job displayed as running forever. started_at is carried over
+                # from the existing row so the run's start time is not lost.
                 await db.execute(
-                    """UPDATE job_status
-                       SET status = ?, updated_at = ?
-                       WHERE name = ? AND instance_id = ?""",
-                    (status, now, job_name, instance_id),
+                    """INSERT INTO job_status (name, status, instance_id, started_at, updated_at)
+                       VALUES (
+                           ?, ?, ?,
+                           COALESCE((SELECT started_at FROM job_status WHERE name = ?), ?),
+                           ?
+                       )
+                       ON CONFLICT(name) DO UPDATE SET
+                           status = excluded.status,
+                           instance_id = excluded.instance_id,
+                           updated_at = excluded.updated_at""",
+                    (job_name, status, instance_id, job_name, now, now),
                 )
 
             await db.commit()
@@ -223,7 +237,30 @@ class RedisStateBackend(StateBackend):
     """Redis-based state backend for distributed deployments."""
 
     def __init__(self, redis_client: Any) -> None:
+        """Accept a Redis client or a connection URL."""
+        if isinstance(redis_client, str):
+            try:
+                import redis.asyncio as redis_asyncio
+            except ImportError as e:
+                raise ImportError(
+                    "redis is required to build a state backend from a URL.\n"
+                    "Install with: pip install redis"
+                ) from e
+            redis_client = redis_asyncio.from_url(redis_client)
+
         self.redis = redis_client
+
+    async def close(self) -> None:
+        """Close the underlying Redis client.
+
+        SQLiteStateBackend already exposes this; without a matching method here
+        callers have to special-case the backend type to shut down cleanly.
+        """
+        closer = getattr(self.redis, "aclose", None) or getattr(self.redis, "close", None)
+        if closer is not None:
+            result = closer()
+            if inspect.isawaitable(result):
+                await result
 
     async def set_last_run(self, job_name: str, timestamp: datetime) -> None:
         """Set the last run timestamp for a job."""
