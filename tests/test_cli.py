@@ -1,10 +1,11 @@
 """Tests for the fastapi-crons console script and CLI commands."""
 
+import re
 import threading
+from importlib import metadata
 from pathlib import Path
 
 import pytest
-import tomllib
 from typer.testing import CliRunner
 
 import fastapi_crons.cli as cli_module
@@ -26,16 +27,40 @@ def _reset_cli_backends(temp_db):
     cli_module.lock_manager = None
 
 
+def declared_console_scripts() -> dict[str, str]:
+    """The console scripts fastapi-crons declares.
+
+    Read from installed metadata when the package is installed, which is what
+    actually decides whether pip creates the script. Fall back to pyproject.toml
+    for a plain source checkout. tomllib is deliberately not used: it only
+    exists on 3.11+ and this package supports 3.10.
+    """
+    try:
+        dist = metadata.distribution("fastapi-crons")
+    except metadata.PackageNotFoundError:
+        dist = None
+
+    if dist is not None:
+        return {ep.name: ep.value for ep in dist.entry_points if ep.group == "console_scripts"}
+
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    section = re.search(
+        r"^\[project\.scripts\]\s*$(.*?)(?=^\[|\Z)",
+        pyproject.read_text(encoding="utf-8"),
+        re.MULTILINE | re.DOTALL,
+    )
+    if section is None:
+        return {}
+
+    return dict(re.findall(r'^\s*"?([\w.-]+)"?\s*=\s*"([^"]+)"', section.group(1), re.MULTILINE))
+
+
 class TestConsoleScript:
     """The entry point declared in pyproject.toml (issue #18)."""
 
     def test_console_script_is_declared(self):
-        """pyproject.toml must declare the documented fastapi-crons script."""
-        pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
-        with pyproject.open("rb") as fh:
-            data = tomllib.load(fh)
-
-        assert data["project"]["scripts"]["fastapi-crons"] == "fastapi_crons.cli:cli"
+        """The documented fastapi-crons script must be declared."""
+        assert declared_console_scripts().get("fastapi-crons") == "fastapi_crons.cli:cli"
 
     def test_entry_point_target_is_callable(self):
         """The path in the entry point must resolve to the Typer app."""
