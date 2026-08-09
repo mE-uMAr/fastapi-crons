@@ -56,6 +56,12 @@ dashboard = []
 "Homepage" = "https://github.com/me-umar/fastapi-crons"
 "Documentation" = "https://crons.darcode.dev"
 
+# cli.py has always defined a full Typer app, but without this section pip
+# installs no console script at all, so the documented `fastapi-crons ...`
+# commands were only reachable via `python -m fastapi_crons.cli`.
+[project.scripts]
+fastapi-crons = "fastapi_crons.cli:cli"
+
 [tool.setuptools.packages.find]
 where = ["."]
 # Without an explicit include, tests/, examples/ and scripts/ get published as
