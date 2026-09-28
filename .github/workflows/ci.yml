@@ -80,7 +80,7 @@ jobs:
 
       - name: Publish Package to GitHub Release
         if: steps.release.outputs.released == 'true'
-        uses: python-semantic-release/publish-action@v10.5.3
+        uses: python-semantic-release/publish-action@v10.7.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
